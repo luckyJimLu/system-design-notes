@@ -37,7 +37,7 @@
 
 ## 3. 修订后的总体架构
 
-~~~mermaid
+```mermaid
 flowchart TD
     PHY["核间物理链路"] --> DEMUX["Channel Demux"]
     DEMUX --> M["Channel 0<br/>ModemLog Ring"]
@@ -53,7 +53,7 @@ flowchart TD
     BURST --> SQ
     SQ --> STORE["Storage Owner"]
     STORE --> DISK["FatFs / SDMMC"]
-~~~
+```
 
 ### 线程配置
 
@@ -129,7 +129,7 @@ void channel_rx_isr(channel_id_t channel,
 
 ## 6. Core Worker调度流程
 
-~~~mermaid
+```mermaid
 flowchart TD
     WAIT["等待Task Notification"] --> SNAP["获取ready bits"]
     SNAP --> PICK["按优先级和等待时间选通道"]
@@ -141,7 +141,7 @@ flowchart TD
     CLEAR --> MORE{"还有ready通道？"}
     MORE -->|是| PICK
     MORE -->|否| WAIT
-~~~
+```
 
 伪代码：
 
@@ -248,7 +248,7 @@ typedef struct {
 
 处理顺序：
 
-~~~mermaid
+```mermaid
 sequenceDiagram
     participant RX as Channel RX
     participant Core as Core Worker
@@ -262,7 +262,7 @@ sequenceDiagram
     SD-->>Store: 完成或超时
     Store-->>Core: completion
     Core->>Core: 推进commit并释放buffer
-~~~
+```
 
 只有满足下面条件才能释放或复用缓冲：
 
@@ -306,14 +306,14 @@ f_write返回FR_OK
 - 通道级暂停/恢复；
 - 物理队列延迟统计。
 
-~~~mermaid
+```mermaid
 flowchart TD
     Q0["ModemLog TX Queue"] --> ARB["加权仲裁器"]
     Q1["TCPDump TX Queue"] --> ARB
     Q2["CHR TX Queue"] --> ARB
     ARB --> DMA["共享DMA / IPC链路"]
     DMA --> DEMUX["对端按Channel ID分流"]
-~~~
+```
 
 CHR和控制业务应拥有不能被ModemLog借走的最小保留credit。
 
@@ -377,7 +377,7 @@ Burst Worker使用动态任务内存，自身释放所有应用资源后调用 `
 
 ## 14. 生命周期与安全停止
 
-~~~mermaid
+```mermaid
 stateDiagram-v2
     [*] --> STOPPED
     STOPPED --> STARTING: 初始化上下文和文件
@@ -388,7 +388,7 @@ stateDiagram-v2
     SYNCING --> STOPPED: DMA完成且文件关闭
     ACTIVE --> ERROR: 通道或存储错误
     ERROR --> QUIESCING: 受控停止
-~~~
+```
 
 停止时必须等待：
 
@@ -408,7 +408,7 @@ generation只能防止旧数据污染新会话，不能替代等待底层回调�
 
 ## 15. 三种业务端到端流程
 
-~~~mermaid
+```mermaid
 sequenceDiagram
     participant Driver as 核间Driver
     participant Ring as 独立Channel Ring
@@ -423,7 +423,7 @@ sequenceDiagram
     Store->>Store: 公平调度并写盘
     Store-->>Core: 完成
     Core->>Ring: 提交并释放所有权
-~~~
+```
 
 ## 16. 修订后的推荐参数
 
