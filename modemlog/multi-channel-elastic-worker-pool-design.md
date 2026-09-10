@@ -16,7 +16,7 @@
 
 推荐结构：
 
-~~~mermaid
+```mermaid
 flowchart TD
     D["核间驱动 / ISR / DMA"] --> C1["ModemLog通道"]
     D --> C2["TCPDump通道"]
@@ -29,7 +29,7 @@ flowchart TD
     R3 --> P
     P --> S["唯一Storage Owner"]
     S --> F["三个独立文件"]
-~~~
+```
 
 三个通道和业务上下文长期存在；0～2个处理Worker按需创建并在空闲后退出；写盘由一个串行Storage Owner完成。
 
@@ -135,14 +135,14 @@ Worker只处理有界数据，不长期持有Socket、文件、DMA、协议状�
 
 三种业务如果写同一块SD卡/FatFs，只保留一个Storage Owner：
 
-~~~mermaid
+```mermaid
 flowchart LR
     M["ModemLog写请求"] --> Q["Storage调度器"]
     T["TCPDump写请求"] --> Q
     C["CHR写请求"] --> Q
     Q --> W["唯一Storage Owner"]
     W --> SD["FatFs / SDMMC"]
-~~~
+```
 
 这样避免多线程同时阻塞SD卡、FatFs重入锁、DMA所有权混乱和文件偏移竞争。
 
@@ -411,7 +411,7 @@ FreeRTOS中，删除任务的内核动态内存由Idle任务回收；任务代�
 
 ## 12. 业务生命周期
 
-~~~mermaid
+```mermaid
 stateDiagram-v2
     [*] --> STOPPED
     STOPPED --> STARTING: start
@@ -421,7 +421,7 @@ stateDiagram-v2
     DRAINING --> STOPPED: 排空并同步
     ACTIVE --> ERROR: 通道或存储错误
     ERROR --> DRAINING: 受控停止
-~~~
+```
 
 正确启动顺序：
 
