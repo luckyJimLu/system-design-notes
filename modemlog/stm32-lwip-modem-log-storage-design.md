@@ -409,7 +409,209 @@ typedef struct {
 9. 校验接收字节数、写入字节数和文件长度；
 10. 监控 CPU 占用、线程栈高水位和环形缓冲区高水位。
 
-## 15. 最终结论
+## 15. Socket 与文件写入同时可能阻塞的处理
+
+### 15.1 核心原则
+
+Socket 的 `recv()` 和 FatFs 的 `f_write()` 都可能阻塞。设计目标不是强行消除所有阻塞，而是：
+
+> **让两个阻塞发生在不同线程，并给每个可能永久等待的路径设置超时、统计和恢复策略。**
+
+| 线程 | 允许阻塞的位置 | 阻塞期间另一线程 |
+|---|---|---|
+| Socket接收线程 | `recv()`、等待缓冲区空间 | 写盘线程继续清空缓冲区 |
+| 写盘线程 | 等待任务通知、`f_write()`、`f_sync()` | Socket线程继续接收数据 |
+
+```mermaid
+flowchart TD
+    RX["Socket接收线程"] -->|"recv阻塞等待数据"| S["lwIP Socket"]
+    RX -->|"收到数据后发布write_seq"| R["SPSC环形缓冲区"]
+    R --> W["写盘线程"]
+    W -->|"f_write阻塞"| D["FatFs / SD卡"]
+```
+
+两个线程之间不能持有公共大锁，文件系统驱动也不能在写盘期间长时间关闭中断。
+
+### 15.2 Socket 使用阻塞模式，但设置接收超时
+
+没有数据时，阻塞式 `recv()` 会让任务休眠，比非阻塞轮询更节省 CPU。建议使用阻塞 Socket 配合有限接收超时：
+
+```c
+struct timeval timeout = {
+    .tv_sec  = 0,
+    .tv_usec = 200 * 1000,
+};
+
+setsockopt(sock,
+           SOL_SOCKET,
+           SO_RCVTIMEO,
+           &timeout,
+           sizeof(timeout));
+```
+
+接收循环：
+
+```c
+int ret = recv(sock, buffer, size, 0);
+
+if (ret > 0) {
+    process_received_data(buffer, (uint32_t)ret);
+} else if (ret == 0) {
+    handle_socket_closed();
+} else if ((errno == EWOULDBLOCK) ||
+           (errno == EAGAIN)) {
+    check_stop_request();
+    check_modem_state();
+} else {
+    handle_socket_error(errno);
+}
+```
+
+持续有日志数据时，`recv()` 通常立即返回。设置超时主要用于退出、重连、状态检查和故障恢复。
+
+如果系统使用 `send()` 向 Modem 发送控制命令，也应设置 `SO_SNDTIMEO`，避免远端停止读取后发送线程永久阻塞。
+
+### 15.3 直接接收到环形缓冲区时的所有权
+
+生产者可以先定位空闲区域，再直接把该地址传给 `recv()`。即使 `recv()` 阻塞也不会破坏所有权，因为新数据尚未通过 `write_seq` 发布：
+
+```c
+uint8_t *destination = &ring->data[write_pos];
+
+/* 可能阻塞，但该区域尚未对消费者可见 */
+int received = recv(sock,
+                    destination,
+                    contiguous_free,
+                    0);
+
+if (received > 0) {
+    /* recv完成后才把所有权发布给消费者 */
+    atomic_store_explicit(
+        &ring->write_seq,
+        write_seq + (uint32_t)received,
+        memory_order_release);
+
+    xTaskNotifyGive(log_writer_task_handle);
+}
+```
+
+写盘线程只处理已发布到 `write_seq` 之前的数据。
+
+### 15.4 写盘完成前不能归还缓冲区
+
+`f_write()` 返回成功且实际写入长度正确后，消费者才能推进 `read_seq`：
+
+```c
+UINT written = 0;
+FRESULT result = f_write(file,
+                         &ring->data[read_pos],
+                         contiguous_used,
+                         &written);
+
+if ((result == FR_OK) &&
+    (written == contiguous_used)) {
+    atomic_store_explicit(
+        &ring->read_seq,
+        read_seq + written,
+        memory_order_release);
+}
+```
+
+如果底层 `disk_write()` 使用 DMA，它必须等待 DMA 完成后才能返回。下面这种实现是错误的：
+
+```c
+HAL_SD_WriteBlocks_DMA(...);
+return RES_OK;  /* 错误：DMA可能仍在读取环形缓冲区 */
+```
+
+否则 `f_write()` 返回后，Socket线程可能覆盖仍被 DMA 使用的区域。
+
+资源最少且安全的实现，是让 `disk_write()` 同步等待 DMA 完成：
+
+```c
+DRESULT disk_write(...)
+{
+    HAL_SD_WriteBlocks_DMA(...);
+
+    if (xSemaphoreTake(sd_done_sem,
+                       pdMS_TO_TICKS(500))
+        != pdTRUE) {
+        sd_timeout_count++;
+        abort_sd_transfer();
+        reset_sd_controller();
+        return RES_ERROR;
+    }
+
+    return RES_OK;
+}
+```
+
+如果未来改成完全异步写盘，必须增加 `IN_FLIGHT` 所有权状态或独立 DMA 缓冲区，资源消耗和实现复杂度都会增加。
+
+### 15.5 环形缓冲区满时
+
+缓冲区满表示存储在某段时间内跟不上日志输入。建议按水位分级处理：
+
+| 缓冲区占用 | 动作 |
+|---:|---|
+| 小于75% | 正常接收与写盘 |
+| 75%以上 | 立即唤醒写盘线程，减少调度延迟 |
+| 90%以上 | 如果支持，通知Modem暂停或降低日志等级 |
+| 100% | 暂停 `recv()`，利用TCP窗口背压 |
+| 超过最大允许时间 | 停止抓取或按策略丢弃，并记录缺口 |
+
+```c
+while (log_ring_free(&ring) == 0U) {
+    if (wait_for_ring_space(pdMS_TO_TICKS(200))
+        == WAIT_TIMEOUT) {
+
+        request_modem_log_pause_if_supported();
+
+        if (storage_failed_too_long()) {
+            stop_log_capture();
+            break;
+        }
+    }
+}
+```
+
+如果日志和命令响应共用同一 Socket，停止 `recv()` 也会阻塞命令响应。此时应优先：
+
+1. 为日志使用独立 Socket；
+2. 使用 Modem 的 PAUSE/RESUME 流控；
+3. 降低日志等级；
+4. 为控制消息预留独立处理能力。
+
+### 15.6 线程优先级
+
+推荐相对优先级：
+
+```text
+Modem Socket RX：高
+Log Writer：比RX低一级
+普通后台任务：低于Writer
+Idle：最低
+```
+
+写盘线程不能设置得过低，否则可能长期得不到调度，最终把环形缓冲区填满。
+
+### 15.7 每个阻塞点都应有边界
+
+| 阻塞操作 | 推荐处理 |
+|---|---|
+| `recv()` | 100～500 ms超时 |
+| `send()` | 100～500 ms超时 |
+| 等待环形空间 | 每100～200 ms检查一次，并设置累计上限 |
+| SD DMA完成等待 | 根据实测设置，例如500 ms |
+| `f_write()` | 由底层 `disk_write()` 保证硬件超时 |
+| `f_sync()` | 底层磁盘操作同样必须有超时 |
+| 等待任务通知 | 可以长等待，但退出流程必须主动唤醒 |
+
+最终约束是：
+
+> **Socket可以阻塞，文件写入也可以阻塞，但不能在同一个线程中相互串联；写盘真正完成前不能归还缓冲区；所有网络与硬件永久等待风险都必须有超时和恢复路径。**
+
+## 16. 最终结论
 
 资源最少且具备工程可靠性的方案是：
 
