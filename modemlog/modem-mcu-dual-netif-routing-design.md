@@ -1,5 +1,10 @@
 # Modem 与 MCU 双网络域通信设计
 
+> **历史设计，非当前实施基线。** 请先阅读[统一方案](diagnostics-unified-design.md)与[修订流程图](modem-complete-mermaid-flows.md)。
+>
+> 两个业务Socket不等于两个netif；TCPDump已改为MCU本地捕获。NAT/wan-lan0只是Modem可选拓扑；上游lwIP不默认提供完整产品NAT。Hook返回NULL会回退；安全范围须独立于可变netif配置，以下黑洞netif示例不可直接采用。
+
+
 ## 1. 需求
 
 Modem 与 MCU 之间通过核间链路通信，上层希望继续使用 Socket/lwIP API。同时系统还需要通过 Modem 访问公网。

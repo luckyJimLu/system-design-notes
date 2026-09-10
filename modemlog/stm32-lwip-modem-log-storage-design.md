@@ -1,5 +1,10 @@
 # STM32 + lwIP Modem 高速日志低资源写盘设计
 
+> **历史设计，非当前实施基线。** 请先阅读[统一方案](diagnostics-unified-design.md)与[修订流程图](modem-complete-mermaid-flows.md)。
+>
+> 本页只覆盖早期单Socket模型。volatile/DMB不是通用C并发方案；环满不能与recv返回0混同；f_write、DMA缓冲复用与f_sync持久化检查点不是同一事件。以下代码仅供历史追溯。
+
+
 ## 1. 问题背景
 
 系统运行在 STM32 上，应用通过 lwIP Socket 与 Modem 通信。除普通命令响应外，Modem 会主动发送日志 IND，持续速率约为 **1 Mbps**。这些数据需要可靠写入文件，而系统的 RAM、线程和 CPU 资源有限。

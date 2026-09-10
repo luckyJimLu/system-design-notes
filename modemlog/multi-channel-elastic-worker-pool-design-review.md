@@ -1,5 +1,10 @@
 # ModemLog、TCPDump、CHR 独立通道架构审查与修订
 
+> **历史设计，非当前实施基线。** 请先阅读[统一方案](diagnostics-unified-design.md)与[修订流程图](modem-complete-mermaid-flows.md)。
+>
+> 本页仍含已撤销建议：TCPDump不能默认通过pbuf_ref保留正常网络包直到SD落盘；这会占住RX资源且不保证内容快照稳定。原三核间输入/Core模型由双Socket Reactor与MCU本地Capture Tap取代。
+
+
 ## 1. 审查结论
 
 原设计的正确方向是：
