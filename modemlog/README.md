@@ -1,5 +1,12 @@
 # Modem 诊断系统设计
 
+## 嵌入式 / RTOS 架构研究
+
+- [资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](resource-constrained-embedded-rtos-architecture.md)
+  - 面向 KB 级 SRAM、低主频 MCU 与无 MMU 场景
+  - 覆盖静态内存、任务模型、ISR/临界区、SPSC Ring Buffer、Task Notification、Watchdog、Tickless Idle、RTOS 裁剪与工程验证
+  - 提供 FreeRTOS / RT-Thread Nano / Zephyr 选型与裁剪思路、工程检查清单和验证流程
+
 ## 当前设计入口
 
 - [统一设计基线：ModemLog、CHR双Socket与MCU本地抓包](diagnostics-unified-design.md)
