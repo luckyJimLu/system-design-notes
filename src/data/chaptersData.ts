@@ -722,8 +722,8 @@ export function getChapters(): Chapter[] {
 
   // Sort unique keys according to embeddedMeta order
   uniqueKeys.sort((a, b) => {
-    const fileA = a.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';
-    const fileB = b.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';
+    const fileA = a.split('/').pop()?.replace('.md', '').replace(/^\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';
+    const fileB = b.split('/').pop()?.replace('.md', '').replace(/^\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';
     const orderA = embeddedMeta[fileA]?.order ?? 999;
     const orderB = embeddedMeta[fileB]?.order ?? 999;
     if (orderA !== orderB) return orderA - orderB;
@@ -735,10 +735,12 @@ export function getChapters(): Chapter[] {
   for (const key of uniqueKeys) {
     const rawMarkdown = markdownModules[key] || '';
     const fileName = key.split('/').pop() || '';
-    const baseKey = fileName.replace('.md', '').toLowerCase().replace(/-/g, '_');
+    // Modem documents use a visible NN- prefix while metadata and route IDs stay stable.
+    const stableFileName = fileName.replace(/^\d{2}-/, '');
+    const baseKey = stableFileName.replace('.md', '').toLowerCase().replace(/-/g, '_');
     const info = embeddedMeta[baseKey];
 
-    const cleanTitle = fileName
+    const cleanTitle = stableFileName
       .replace('.md', '')
       .split('-')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -749,7 +751,7 @@ export function getChapters(): Chapter[] {
     const cleanFolder = key.replace(/^\.\.\/\.\.\//, '').replace(/\/[^/]+$/, '');
 
     chapters.push({
-      id: `embedded-${fileName.replace('.md', '')}`,
+      id: `embedded-${stableFileName.replace('.md', '')}`,
       folderName: cleanFolder,
       fileName,
       number: embeddedIndex++,

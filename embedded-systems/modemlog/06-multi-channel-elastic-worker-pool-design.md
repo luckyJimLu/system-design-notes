@@ -1,6 +1,6 @@
 # ModemLog、TCPDump、CHR 独立通道与弹性工作池设计
 
-> **历史设计，非当前实施基线。** 请先阅读[统一方案](diagnostics-unified-design.md)与[修订流程图](modem-complete-mermaid-flows.md)。
+> **历史设计，非当前实施基线。** 请先阅读[统一方案](01-diagnostics-unified-design.md)与[修订流程图](03-modem-complete-mermaid-flows.md)。
 >
 > 本页动态线程池不是当前推荐。worker_release_slot在vTaskDelete(NULL)之前调用存在栈复用竞态，不得照抄。当前为一个双Socket Reactor加一个Storage Owner，TCPDump走本地私有快照通道。
 

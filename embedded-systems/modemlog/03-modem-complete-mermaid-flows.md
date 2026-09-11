@@ -1,6 +1,6 @@
 # Modem 诊断系统 Mermaid 流程图
 
-本页与[统一设计基线](diagnostics-unified-design.md)及[C++实现架构](cpp-architecture-and-interactions.md)一致：ModemLog、CHR各自一个Socket；TCPDump在MCU本地旁路抓包，不再作为Modem第三个Socket。图示表达推荐设计，不代表驱动实现已验证。第10至12图补充C++模块和交互。
+本页与[统一设计基线](01-diagnostics-unified-design.md)及[C++实现架构](02-cpp-architecture-and-interactions.md)一致：ModemLog、CHR各自一个Socket；TCPDump在MCU本地旁路抓包，不再作为Modem第三个Socket。图示表达推荐设计，不代表驱动实现已验证。第10至12图补充C++模块和交互。
 
 ## 1. 整体数据路径：双Socket与本地快照
 
@@ -161,7 +161,7 @@ stateDiagram-v2
 - 两个应用任务为Socket Reactor和Storage Owner，不包含现有lwIP/驱动/RTOS任务。
 - Capture RX/TX可能并发；使用独立私有槽与非自旋try-guard，不长期持有正常网络pbuf。
 - Storage单一消费并管理FIL，原缓冲何时可复用和何时持久化是不同事件。
-- RX/TX接口层、offload、PCAP LinkType和实际调用上下文以[主方案](diagnostics-unified-design.md)为准。
+- RX/TX接口层、offload、PCAP LinkType和实际调用上下文以[主方案](01-diagnostics-unified-design.md)为准。
 
 ## 10. C++模块与执行上下文
 

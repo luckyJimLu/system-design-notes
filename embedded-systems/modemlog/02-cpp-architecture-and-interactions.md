@@ -1,6 +1,6 @@
 # C++ 实现架构：双 Socket 与本地 TCPDump
 
-本文是[统一设计基线](diagnostics-unified-design.md)的 C++ 落地设计，延续 STM32、lwIP、FreeRTOS、FatFs 假设。重点是类职责、执行上下文、消息契约、所有权与生命周期，不是已经编译验证的固件。接口片段是设计草图，省略平台适配实现。
+本文是[统一设计基线](01-diagnostics-unified-design.md)的 C++ 落地设计，延续 STM32、lwIP、FreeRTOS、FatFs 假设。重点是类职责、执行上下文、消息契约、所有权与生命周期，不是已经编译验证的固件。接口片段是设计草图，省略平台适配实现。
 
 ## 1. 总体选择
 

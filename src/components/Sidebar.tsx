@@ -242,7 +242,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           : 'bg-purple-100 text-purple-800'
                       }`}
                     >
-                      {ch.volume === 0 ? (ch.id.includes('rtos') ? 'RT' : 'EM') : ch.number}
+                      {ch.volume === 0
+                        ? (ch.folderName.includes('modemlog')
+                            ? (ch.fileName.match(/^(\d{2})-/)?.[1] || 'EM')
+                            : ch.id.includes('rtos') ? 'RT' : 'EM')
+                        : ch.number}
                     </span>
 
                     <span className="truncate leading-tight">

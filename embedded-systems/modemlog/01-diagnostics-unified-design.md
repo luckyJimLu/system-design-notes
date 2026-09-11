@@ -30,7 +30,7 @@
 
 历史文档保留用于追溯，但冲突部分以本文为准；旧代码片段不能直接作为生产实现。
 
-C++落地请结合[C++整体架构与交互契约](cpp-architecture-and-interactions.md)：采用静态组合，Coordinator并入Reactor，不新增管理任务；明确可靠控制槽、不可复制缓冲lease、C回调适配和显式停止协议。类、业务会话和任务不是一一对应关系。
+C++落地请结合[C++整体架构与交互契约](02-cpp-architecture-and-interactions.md)：采用静态组合，Coordinator并入Reactor，不新增管理任务；明确可靠控制槽、不可复制缓冲lease、C回调适配和显式停止协议。类、业务会话和任务不是一一对应关系。
 
 ## 3. 端到端架构
 

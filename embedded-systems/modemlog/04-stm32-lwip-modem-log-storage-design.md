@@ -1,6 +1,6 @@
 # STM32 + lwIP Modem 高速日志低资源写盘设计
 
-> **历史设计，非当前实施基线。** 请先阅读[统一方案](diagnostics-unified-design.md)与[修订流程图](modem-complete-mermaid-flows.md)。
+> **历史设计，非当前实施基线。** 请先阅读[统一方案](01-diagnostics-unified-design.md)与[修订流程图](03-modem-complete-mermaid-flows.md)。
 >
 > 本页只覆盖早期单Socket模型。volatile/DMB不是通用C并发方案；环满不能与recv返回0混同；f_write、DMA缓冲复用与f_sync持久化检查点不是同一事件。以下代码仅供历史追溯。
 
