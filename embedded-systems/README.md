@@ -1,0 +1,34 @@
+# Embedded Systems
+
+面向资源受限 MCU、RTOS、通信模组、网络栈与固件架构的专题资料。
+
+## 目录
+
+### RTOS
+
+- [资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](rtos/resource-constrained-embedded-rtos-architecture.md)
+  - 静态内存与链接期资源收敛
+  - 少任务 + 事件驱动 + Active Object / HSM
+  - ISR、临界区、MSP/PSP 与栈防御
+  - SPSC 无锁 Ring Buffer 与 Task Notification
+  - Watchdog Supervisor 与 Tickless Idle
+  - FreeRTOS / RT-Thread Nano / Zephyr 裁剪与选型
+
+### Modem / Networking
+
+- [Modem 诊断与 MCU 网络架构](modemlog/README.md)
+  - ModemLog / CHR 双 Socket
+  - lwIP / TCP/IP 双网络接口
+  - C++ 固件架构与交互契约
+  - MCU 本地抓包、存储与诊断
+
+## 后续建议目录
+
+```text
+embedded-systems/
+├── rtos/          # RTOS、调度、内存、IPC、实时性
+├── modemlog/      # Modem、蜂窝通信、诊断与网络
+├── networking/    # lwIP、TCP/IP、协议栈
+├── drivers/       # UART/SPI/I2C/DMA 等驱动设计
+└── bootloader/    # 启动、升级、恢复与安全启动
+```
