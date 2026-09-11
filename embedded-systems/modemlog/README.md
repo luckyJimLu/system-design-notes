@@ -1,11 +1,6 @@
 # Modem 诊断系统设计
 
-## 嵌入式 / RTOS 架构研究
-
-- [资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](resource-constrained-embedded-rtos-architecture.md)
-  - 面向 KB 级 SRAM、低主频 MCU 与无 MMU 场景
-  - 覆盖静态内存、任务模型、ISR/临界区、SPSC Ring Buffer、Task Notification、Watchdog、Tickless Idle、RTOS 裁剪与工程验证
-  - 提供 FreeRTOS / RT-Thread Nano / Zephyr 选型与裁剪思路、工程检查清单和验证流程
+> [← 返回 Embedded Systems 总目录](../README.md)
 
 ## 当前设计入口
 
@@ -27,6 +22,10 @@
 | [双网络域方案](modem-mcu-dual-netif-routing-design.md) | 地址域仍有价值；NAT只是可选拓扑，路由Hook不是完整隔离证明 |
 | [弹性线程池草案](multi-channel-elastic-worker-pool-design.md) | 不采用自删除前归还静态栈；TCPDump不再视为Modem独立输入通道 |
 | [早期架构审查](multi-channel-elastic-worker-pool-design-review.md) | 原pbuf_ref异步落盘建议已撤销；改成私有快照和双Socket Reactor |
+
+## 相关 RTOS 资料
+
+- [资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](../rtos/resource-constrained-embedded-rtos-architecture.md)
 
 ## 设计演进
 
