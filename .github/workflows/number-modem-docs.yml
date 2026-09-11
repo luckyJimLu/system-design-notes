@@ -1,0 +1,97 @@
+name: Apply Modem Numbering Migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/number-modem-docs.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event.head_commit.message == 'chore: apply modem numbering migration'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update numbered Modem compatibility
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          chapters = Path('src/data/chaptersData.ts')
+          text = chapters.read_text(encoding='utf-8')
+
+          replacements = {
+              "const fileA = a.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';":
+              "const fileA = a.split('/').pop()?.replace('.md', '').replace(/^\\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';",
+              "const fileB = b.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';":
+              "const fileB = b.split('/').pop()?.replace('.md', '').replace(/^\\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';",
+              "    const fileName = key.split('/').pop() || '';\n    const baseKey = fileName.replace('.md', '').toLowerCase().replace(/-/g, '_');\n    const info = embeddedMeta[baseKey];":
+              "    const fileName = key.split('/').pop() || '';\n    // Modem documents use a visible NN- prefix while metadata and route IDs stay stable.\n    const stableFileName = fileName.replace(/^\\d{2}-/, '');\n    const baseKey = stableFileName.replace('.md', '').toLowerCase().replace(/-/g, '_');\n    const info = embeddedMeta[baseKey];",
+              "    const cleanTitle = fileName\n      .replace('.md', '')":
+              "    const cleanTitle = stableFileName\n      .replace('.md', '')",
+              "      id: `embedded-${fileName.replace('.md', '')}`,":
+              "      id: `embedded-${stableFileName.replace('.md', '')}`,")
+          }
+
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Expected chaptersData pattern not found: {old[:80]}')
+              text = text.replace(old, new, 1)
+
+          chapters.write_text(text, encoding='utf-8')
+
+          sidebar = Path('src/components/Sidebar.tsx')
+          text = sidebar.read_text(encoding='utf-8')
+          old = "{ch.volume === 0 ? (ch.id.includes('rtos') ? 'RT' : 'EM') : ch.number}"
+          new = "{ch.volume === 0\n                        ? (ch.folderName.includes('modemlog')\n                            ? (ch.fileName.match(/^(\\d{2})-/)?.[1] || 'EM')\n                            : ch.id.includes('rtos') ? 'RT' : 'EM')\n                        : ch.number}"
+          if old not in text:
+              raise SystemExit('Expected Sidebar badge pattern not found')
+          sidebar.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          link_map = {
+              'diagnostics-unified-design.md': '01-diagnostics-unified-design.md',
+              'cpp-architecture-and-interactions.md': '02-cpp-architecture-and-interactions.md',
+              'modem-complete-mermaid-flows.md': '03-modem-complete-mermaid-flows.md',
+              'stm32-lwip-modem-log-storage-design.md': '04-stm32-lwip-modem-log-storage-design.md',
+              'modem-mcu-dual-netif-routing-design.md': '05-modem-mcu-dual-netif-routing-design.md',
+              'multi-channel-elastic-worker-pool-design.md': '06-multi-channel-elastic-worker-pool-design.md',
+              'multi-channel-elastic-worker-pool-design-review.md': '07-multi-channel-elastic-worker-pool-design-review.md',
+          }
+
+          modem_dir = Path('embedded-systems/modemlog')
+          for path in modem_dir.glob('*.md'):
+              if path.name == 'README.md':
+                  continue
+              content = path.read_text(encoding='utf-8')
+              updated = content
+              for old_name, new_name in link_map.items():
+                  updated = updated.replace(f']({old_name})', f']({new_name})')
+                  updated = updated.replace(f'](./{old_name})', f'](./{new_name})')
+              if updated != content:
+                  path.write_text(updated, encoding='utf-8')
+          PY
+
+      - name: Verify build
+        run: |
+          npm install
+          npm run build
+
+      - name: Remove one-off migration workflow
+        run: git rm .github/workflows/number-modem-docs.yml
+
+      - name: Commit migration
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/data/chaptersData.ts src/components/Sidebar.tsx embedded-systems/modemlog
+          git commit -m 'fix: preserve numbered modem docs in site navigation'
+          git push origin main
