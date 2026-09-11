@@ -70,7 +70,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
         <button
           type="button"
           onClick={onBackToChapters}
-          className="flex items-center gap-1 text-xs font-medium text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 px-3 py-1.5 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-900 bg-white border border-neutral-200 hover:bg-neutral-50 px-3 py-1.5 rounded-md transition-colors shadow-2xs focus-visible:ring-2 focus-visible:ring-neutral-900"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           {t.backBtn}
@@ -78,10 +78,10 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
       </div>
 
       <div className="mb-8">
-        <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+        <span className="text-xs font-mono font-semibold uppercase tracking-wider text-neutral-500">
           {t.badge}
         </span>
-        <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mt-1 tracking-tight">
           {t.title}
         </h1>
         <p className="text-sm text-neutral-600 mt-2 max-w-3xl leading-relaxed">
@@ -98,7 +98,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
             placeholder={t.searchPlaceholder}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-900"
           />
         </div>
 
@@ -106,7 +106,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
           <select
             value={selectedTopic}
             onChange={e => setSelectedTopic(e.target.value)}
-            className="text-xs bg-white border border-neutral-300 rounded-lg px-2.5 py-2 text-neutral-700 focus:outline-none"
+            className="text-xs bg-white border border-neutral-200 rounded-md px-2.5 py-2 text-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-900"
           >
             <option value="all">{t.allTopics}</option>
             {topics.filter(t => t !== 'all').map(topic => (
@@ -114,15 +114,15 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
             ))}
           </select>
 
-          <div className="flex items-center bg-neutral-100 p-0.5 rounded-lg text-xs">
+          <div className="flex items-center bg-neutral-200/70 p-0.5 rounded-md text-xs">
             {['all', 'paper', 'blog', 'code'].map(type => (
               <button
                 key={type}
                 type="button"
                 onClick={() => setSelectedType(type)}
-                className={`px-2.5 py-1.5 rounded-md capitalize transition-colors ${
+                className={`px-2.5 py-1 rounded text-xs transition-all ${
                   selectedType === type
-                    ? 'bg-white text-neutral-900 font-medium shadow-xs'
+                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
                     : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
@@ -134,18 +134,18 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
       </div>
 
       {/* Resources Grid */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3.5 sm:grid-cols-2">
         {filtered.map((item, idx) => (
           <a
             key={idx}
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-4 bg-white border border-neutral-200 rounded-xl shadow-xs hover:border-blue-300 hover:shadow-md transition-all"
+            className="group flex flex-col justify-between p-4 bg-white border border-neutral-200 rounded-lg shadow-2xs hover:border-neutral-400 transition-colors"
           >
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-700 border border-neutral-200/60">
                   {item.topic}
                 </span>
                 <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-mono">
@@ -154,7 +154,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
                 </div>
               </div>
 
-              <h3 className="text-sm font-semibold text-neutral-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+              <h3 className="text-sm font-semibold text-neutral-900 group-hover:text-blue-700 transition-colors line-clamp-2">
                 {item.title}
               </h3>
 
@@ -164,12 +164,12 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
             </div>
 
             <div className="flex items-center justify-between mt-4 pt-3 border-t border-neutral-100 text-xs">
-              <span className="text-neutral-500 truncate max-w-[200px]">
+              <span className="text-neutral-500 font-mono text-[11px] truncate max-w-[200px]">
                 {item.publisher}
               </span>
-              <span className="inline-flex items-center gap-1 text-blue-600 font-medium group-hover:underline">
+              <span className="inline-flex items-center gap-1 text-neutral-900 font-medium group-hover:underline">
                 {t.readSource}
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="w-3 h-3 text-neutral-500" />
               </span>
             </div>
           </a>

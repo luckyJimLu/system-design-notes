@@ -14,7 +14,16 @@ export interface Chapter {
   tags: string[];
   tagsZh?: string[];
   markdown: string;
+  markdownZh?: string;
+  markdownEn?: string;
   estimatedReadTimeMinutes: number;
+}
+
+export function getChapterMarkdown(chapter: Chapter, language: Language): string {
+  if (language === 'zh') {
+    return chapter.markdownZh || chapter.markdown;
+  }
+  return chapter.markdownEn || chapter.markdown;
 }
 
 export interface HeadingItem {

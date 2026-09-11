@@ -4,9 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://vite.dev/config/
 export default defineConfig({
-  // GitHub Pages project site is served from /system-design-notes/.
-  // Keep local development at / while using the repository path in CI builds.
-  base: process.env.GITHUB_ACTIONS ? '/system-design-notes/' : '/',
+  // Use relative base in production for GitHub Pages / static export compatibility, and '/' in dev mode
+  base: process.env.NODE_ENV === 'production' ? './' : '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -15,8 +14,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     allowedHosts: true,
-    fs: {
-      allow: ['.'],
-    },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 3000,
   },
 });

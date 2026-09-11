@@ -37,15 +37,21 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
   return (
     <div
       id="lightbox-backdrop"
-      className="fixed inset-0 z-50 flex flex-col bg-neutral-950/85 backdrop-blur-sm text-neutral-100 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex flex-col bg-neutral-950/90 backdrop-blur-xs text-neutral-100 animate-in fade-in duration-150"
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
+      role="presentation"
     >
       {/* Header bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900/90 select-none">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={alt || (language === 'zh' ? '系统设计架构图' : 'System Design Diagram')}
+        className="flex items-center justify-between px-6 py-3.5 border-b border-neutral-800 bg-neutral-900/95 select-none"
+      >
         <div className="flex flex-col">
-          <span className="text-xs uppercase tracking-wider text-neutral-400">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400">
             {chapterTitle || (language === 'zh' ? '架构图' : 'Architecture Diagram')}
           </span>
           <h3 className="text-sm font-semibold text-neutral-100 line-clamp-1">
@@ -54,25 +60,27 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             id="lightbox-zoom-out"
             type="button"
             onClick={handleZoomOut}
+            aria-label={language === 'zh' ? '缩小' : 'Zoom Out'}
             title={language === 'zh' ? '缩小' : 'Zoom Out'}
-            className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors"
+            className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-xs font-mono px-2 py-1 bg-neutral-800 rounded text-neutral-300">
+          <span className="text-xs font-mono px-2 py-0.5 bg-neutral-800 rounded text-neutral-300">
             {Math.round(scale * 100)}%
           </span>
           <button
             id="lightbox-zoom-in"
             type="button"
             onClick={handleZoomIn}
+            aria-label={language === 'zh' ? '放大' : 'Zoom In'}
             title={language === 'zh' ? '放大' : 'Zoom In'}
-            className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors"
+            className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -80,8 +88,9 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
             id="lightbox-reset"
             type="button"
             onClick={handleResetZoom}
+            aria-label={language === 'zh' ? '重置缩放' : 'Reset Zoom'}
             title={language === 'zh' ? '重置缩放' : 'Reset Zoom'}
-            className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors"
+            className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -89,8 +98,9 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
             id="lightbox-download"
             href={src}
             download={alt ? `${alt.replace(/\s+/g, '_')}.png` : 'system_diagram.png'}
+            aria-label={language === 'zh' ? '下载高清架构图' : 'Download Diagram'}
             title={language === 'zh' ? '下载高清架构图' : 'Download Diagram'}
-            className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors inline-flex items-center"
+            className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors inline-flex items-center focus-visible:ring-1 focus-visible:ring-neutral-400"
           >
             <Download className="w-4 h-4" />
           </a>
@@ -99,8 +109,9 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
             id="lightbox-close"
             type="button"
             onClick={onClose}
+            aria-label={language === 'zh' ? '关闭 (Esc)' : 'Close (Esc)'}
             title={language === 'zh' ? '关闭 (Esc)' : 'Close (Esc)'}
-            className="p-2 rounded-lg bg-neutral-800 hover:bg-red-500/20 hover:text-red-400 text-neutral-200 transition-colors"
+            className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
           >
             <X className="w-4 h-4" />
           </button>

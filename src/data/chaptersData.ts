@@ -641,29 +641,35 @@ export const embeddedMeta: Record<string, EmbeddedDocMeta> = {
   }
 };
 
-// Build chapters array
+// Build chapters array with bilingual markdown loading
 export function getChapters(): Chapter[] {
   const chapters: Chapter[] = [];
 
   // 1. Process chapters 1 to 28
   for (let num = 1; num <= 28; num++) {
-    let matchedKey: string | null = null;
+    let rawMarkdownEn = '';
+    let rawMarkdownZh = '';
     let folderName = '';
+    let defaultFileName = 'README.md';
 
     for (const key of Object.keys(markdownModules)) {
-      const match = key.match(/\.\.\/\.\.\/(\d+)\.\s*(.*?)\/(Readme|README)\.md$/);
+      const match = key.match(/\.\.\/\.\.\/(\d+)\.\s*(.*?)\/(Readme|README)(?:\.([a-zA-Z-]+))?\.md$/i);
       if (match && parseInt(match[1], 10) === num) {
-        matchedKey = key;
-        const exactFolderMatch = key.match(/\.\.\/\.\.\/(.*?)\/(Readme|README)\.md$/);
+        const exactFolderMatch = key.match(/\.\.\/\.\.\/(.*?)\/(Readme|README)/i);
         if (exactFolderMatch) {
           folderName = exactFolderMatch[1];
         }
-        break;
+        const langExt = (match[4] || '').toLowerCase();
+        if (langExt === 'zh' || langExt === 'zh-cn') {
+          rawMarkdownZh = markdownModules[key] || '';
+        } else {
+          rawMarkdownEn = markdownModules[key] || '';
+          defaultFileName = key.split('/').pop() || 'README.md';
+        }
       }
     }
 
-    if (matchedKey) {
-      const rawMarkdown = markdownModules[matchedKey] || '';
+    if (rawMarkdownEn || rawMarkdownZh) {
       const meta = chapterMeta[num] || {
         title: `Chapter ${num}`,
         volume: (num <= 15 ? 1 : 2) as 1 | 2,
@@ -672,13 +678,14 @@ export function getChapters(): Chapter[] {
         tags: []
       };
 
-      const wordCount = rawMarkdown.split(/\s+/).filter(Boolean).length;
+      const primaryMarkdown = rawMarkdownEn || rawMarkdownZh;
+      const wordCount = primaryMarkdown.split(/\s+/).filter(Boolean).length;
       const readTime = Math.max(3, Math.round(wordCount / 200));
 
       chapters.push({
         id: `chapter-${num}`,
         folderName,
-        fileName: matchedKey.split('/').pop() || 'README.md',
+        fileName: defaultFileName,
         number: num,
         title: meta.title,
         titleZh: meta.titleZh,
@@ -688,7 +695,9 @@ export function getChapters(): Chapter[] {
         descriptionZh: meta.descriptionZh,
         tags: meta.tags,
         tagsZh: meta.tagsZh,
-        markdown: rawMarkdown,
+        markdown: primaryMarkdown,
+        markdownEn: rawMarkdownEn || primaryMarkdown,
+        markdownZh: rawMarkdownZh,
         estimatedReadTimeMinutes: readTime
       });
     }
@@ -701,59 +710,79 @@ export function getChapters(): Chapter[] {
     return isEmbeddedOrModem && !isReadme;
   });
 
-  // Sort with preference for embedded-systems path over modemlog path for clean deduplication
-  rawEmbeddedKeys.sort((a, b) => {
-    if (a.includes('/embedded-systems/') && !b.includes('/embedded-systems/')) return -1;
-    if (!a.includes('/embedded-systems/') && b.includes('/embedded-systems/')) return 1;
-    return a.localeCompare(b);
-  });
+  // Group by canonical base file name to pair .zh.md / .en.md / .md together
+  interface EmbeddedFileGroup {
+    canonicalBase: string; // e.g. "diagnostics_unified_design"
+    stableFileName: string; // e.g. "diagnostics-unified-design"
+    fileName: string; // e.g. "01-diagnostics-unified-design.md"
+    cleanFolder: string;
+    keyZh?: string;
+    keyEn?: string;
+    defaultKey?: string;
+  }
 
-  const seenFileNames = new Set<string>();
-  const uniqueKeys: string[] = [];
+  const groupMap = new Map<string, EmbeddedFileGroup>();
 
   for (const key of rawEmbeddedKeys) {
     const fileName = key.split('/').pop() || '';
-    const norm = fileName.toLowerCase();
-    if (!seenFileNames.has(norm)) {
-      seenFileNames.add(norm);
-      uniqueKeys.push(key);
+    // Normalize: e.g. "01-diagnostics-unified-design.en.md" -> "01-diagnostics-unified-design"
+    const withoutExt = fileName.replace(/\.(en|zh|zh-cn)\.md$/i, '').replace(/\.md$/i, '');
+    const stableName = withoutExt.replace(/^\d{2}-/, '');
+    const canonicalBase = stableName.toLowerCase().replace(/-/g, '_');
+
+    let group = groupMap.get(canonicalBase);
+    if (!group) {
+      const cleanFolder = key.replace(/^\.\.\/\.\.\//, '').replace(/\/[^/]+$/, '');
+      group = {
+        canonicalBase,
+        stableFileName: stableName,
+        fileName: `${withoutExt}.md`,
+        cleanFolder
+      };
+      groupMap.set(canonicalBase, group);
+    }
+
+    if (fileName.endsWith('.en.md')) {
+      group.keyEn = key;
+    } else if (fileName.endsWith('.zh.md')) {
+      group.keyZh = key;
+    } else {
+      // Default file (original is in Chinese)
+      group.defaultKey = key;
     }
   }
 
-  // Sort unique keys according to embeddedMeta order
-  uniqueKeys.sort((a, b) => {
-    const fileA = a.split('/').pop()?.replace('.md', '').replace(/^\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';
-    const fileB = b.split('/').pop()?.replace('.md', '').replace(/^\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';
-    const orderA = embeddedMeta[fileA]?.order ?? 999;
-    const orderB = embeddedMeta[fileB]?.order ?? 999;
+  // Convert to array and sort according to embeddedMeta order
+  const sortedGroups = Array.from(groupMap.values());
+  sortedGroups.sort((a, b) => {
+    const orderA = embeddedMeta[a.canonicalBase]?.order ?? 999;
+    const orderB = embeddedMeta[b.canonicalBase]?.order ?? 999;
     if (orderA !== orderB) return orderA - orderB;
-    return a.localeCompare(b);
+    return a.stableFileName.localeCompare(b.stableFileName);
   });
 
   let embeddedIndex = 101;
 
-  for (const key of uniqueKeys) {
-    const rawMarkdown = markdownModules[key] || '';
-    const fileName = key.split('/').pop() || '';
-    // Modem documents use a visible NN- prefix while metadata and route IDs stay stable.
-    const stableFileName = fileName.replace(/^\d{2}-/, '');
-    const baseKey = stableFileName.replace('.md', '').toLowerCase().replace(/-/g, '_');
-    const info = embeddedMeta[baseKey];
+  for (const group of sortedGroups) {
+    // Embedded documents: original is Chinese, so defaultKey is Chinese
+    const rawZh = (group.keyZh && markdownModules[group.keyZh]) || (group.defaultKey && markdownModules[group.defaultKey]) || '';
+    const rawEn = (group.keyEn && markdownModules[group.keyEn]) || '';
+    const rawDefault = rawZh || rawEn;
 
-    const cleanTitle = stableFileName
-      .replace('.md', '')
+    const info = embeddedMeta[group.canonicalBase];
+
+    const cleanTitle = group.stableFileName
       .split('-')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');
 
-    const wordCount = rawMarkdown.split(/\s+/).filter(Boolean).length;
+    const wordCount = rawDefault.split(/\s+/).filter(Boolean).length;
     const readTime = Math.max(3, Math.round(wordCount / 200));
-    const cleanFolder = key.replace(/^\.\.\/\.\.\//, '').replace(/\/[^/]+$/, '');
 
     chapters.push({
-      id: `embedded-${stableFileName.replace('.md', '')}`,
-      folderName: cleanFolder,
-      fileName,
+      id: `embedded-${group.stableFileName}`,
+      folderName: group.cleanFolder,
+      fileName: group.fileName,
       number: embeddedIndex++,
       title: info?.titleEn || cleanTitle,
       titleZh: info?.titleZh || cleanTitle,
@@ -767,7 +796,9 @@ export function getChapters(): Chapter[] {
         '深入剖析嵌入式实时操作系统 (RTOS)、固件协议栈与网络接口架构设计。',
       tags: info?.tagsEn || ['Embedded', 'RTOS', 'Firmware', 'STM32', 'Networking'],
       tagsZh: info?.tagsZh || ['嵌入式', 'RTOS', '固件', 'STM32', '网络栈'],
-      markdown: rawMarkdown,
+      markdown: rawDefault,
+      markdownZh: rawZh,
+      markdownEn: rawEn,
       estimatedReadTimeMinutes: readTime
     });
   }

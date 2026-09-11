@@ -168,11 +168,14 @@ export default function App() {
     return ALL_CHAPTERS.find(c => c.id === currentChapterId) || ALL_CHAPTERS[0];
   }, [currentChapterId]);
 
-  // Extract headings for Table of Contents
+  // Extract headings for Table of Contents based on active language
   const headings = useMemo(() => {
     if (!currentChapter || isResourcesView) return [];
-    return extractHeadings(currentChapter.markdown);
-  }, [currentChapter, isResourcesView]);
+    const activeMarkdown = language === 'zh'
+      ? (currentChapter.markdownZh || currentChapter.markdown)
+      : (currentChapter.markdownEn || currentChapter.markdown);
+    return extractHeadings(activeMarkdown);
+  }, [currentChapter, language, isResourcesView]);
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 flex flex-col font-sans">
@@ -234,6 +237,7 @@ export default function App() {
                     allChapters={ALL_CHAPTERS}
                     fontSize={fontSize}
                     language={language}
+                    onToggleLanguage={handleToggleLanguage}
                   />
                 </div>
 

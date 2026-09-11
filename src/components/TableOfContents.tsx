@@ -58,13 +58,16 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ headings, lang
   };
 
   return (
-    <nav className="w-64 shrink-0 hidden xl:block sticky top-20 self-start pl-4 py-2">
+    <nav
+      aria-label={t.chapter.onThisPage}
+      className="w-64 shrink-0 hidden xl:block sticky top-20 self-start pl-4 py-2"
+    >
       <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
         <ListTree className="w-3.5 h-3.5 text-neutral-400" />
         <span>{t.chapter.onThisPage}</span>
       </div>
 
-      <div className="max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 space-y-1 text-xs">
+      <div className="max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 space-y-0.5 text-xs">
         {headings.map((heading) => {
           const isActive = activeId === heading.id;
           const isH3 = heading.level === 3;
@@ -74,17 +77,17 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ headings, lang
               key={heading.id}
               href={`#${heading.id}`}
               onClick={(e) => handleScrollTo(heading.id, e)}
-              className={`group flex items-start gap-1.5 py-1.5 px-2 rounded-md transition-all ${
-                isH3 ? 'pl-4 text-neutral-600' : 'font-medium text-neutral-800'
+              className={`group flex items-start gap-1.5 py-1.5 px-2 rounded-md transition-colors ${
+                isH3 ? 'pl-4 text-neutral-500' : 'text-neutral-700'
               } ${
                 isActive
-                  ? 'bg-blue-50 text-blue-700 font-semibold border-l-2 border-blue-600'
-                  : 'hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-neutral-100 text-neutral-900 font-semibold'
+                  : 'hover:bg-neutral-50 hover:text-neutral-900'
               }`}
             >
               <ChevronRight
                 className={`w-3 h-3 mt-0.5 shrink-0 transition-transform ${
-                  isActive ? 'rotate-90 text-blue-600' : 'text-neutral-400 group-hover:text-neutral-600'
+                  isActive ? 'rotate-90 text-neutral-900' : 'text-neutral-400 group-hover:text-neutral-600'
                 }`}
               />
               <span className="line-clamp-2 leading-relaxed">{heading.title}</span>

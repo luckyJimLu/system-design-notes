@@ -121,15 +121,28 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         continue;
       }
 
-      // Content search in markdown
-      const contentLower = chapter.markdown.toLowerCase();
-      const index = contentLower.indexOf(q);
+      // Content search across both Chinese and English markdown
+      const targetMarkdown = language === 'zh'
+        ? (chapter.markdownZh || chapter.markdown)
+        : (chapter.markdownEn || chapter.markdown);
+      const altMarkdown = language === 'zh'
+        ? (chapter.markdownEn || chapter.markdown)
+        : (chapter.markdownZh || chapter.markdown);
+
+      let matchedMd = targetMarkdown;
+      let index = targetMarkdown.toLowerCase().indexOf(q);
+
+      if (index === -1 && altMarkdown) {
+        index = altMarkdown.toLowerCase().indexOf(q);
+        matchedMd = altMarkdown;
+      }
+
       if (index !== -1) {
         const start = Math.max(0, index - 40);
-        const end = Math.min(contentLower.length, index + 110);
-        let snippet = chapter.markdown.slice(start, end).replace(/\n+/g, ' ');
+        const end = Math.min(matchedMd.length, index + 110);
+        let snippet = matchedMd.slice(start, end).replace(/\n+/g, ' ');
         if (start > 0) snippet = '...' + snippet;
-        if (end < contentLower.length) snippet = snippet + '...';
+        if (end < matchedMd.length) snippet = snippet + '...';
 
         matched.push({
           chapter,
@@ -166,27 +179,31 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   return (
     <div
       id="search-modal-backdrop"
-      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-neutral-900/60 backdrop-blur-sm animate-in fade-in duration-100"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-neutral-900/50 backdrop-blur-xs animate-in fade-in duration-100"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
+      role="presentation"
     >
       <div
         id="search-modal-container"
-        className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col max-h-[80vh]"
+        role="dialog"
+        aria-modal="true"
+        aria-label={language === 'zh' ? '全局搜索' : 'Search Chapters'}
+        className="w-full max-w-2xl bg-white rounded-xl shadow-xl border border-neutral-200 overflow-hidden flex flex-col max-h-[80vh]"
         onKeyDown={handleKeyDown}
       >
         {/* Search Input Bar */}
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-neutral-200 bg-neutral-50/50">
-          <Search className="w-5 h-5 text-neutral-400 shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200 bg-white">
+          <Search className="w-4 h-4 text-neutral-400 shrink-0" />
           <input
             ref={inputRef}
             id="search-input"
             type="text"
             placeholder={
               language === 'zh'
-                ? '搜索全部28个章节、系统设计主题、标签 (例如：限流、哈希、布隆过滤器、消息队列)...'
-                : 'Search all 28 chapters, topics, tags (e.g. rate limiter, kafka, quadtree)...'
+                ? '搜索系统设计章节、架构模式、标签 (例如：限流、哈希、布隆过滤器、消息队列)...'
+                : 'Search architecture chapters, system patterns, tags (e.g. rate limiter, kafka)...'
             }
             value={query}
             onChange={(e) => {
@@ -200,11 +217,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               type="button"
               onClick={() => setQuery('')}
               className="p-1 text-neutral-400 hover:text-neutral-600 rounded"
+              aria-label="Clear search input"
             >
               <X className="w-4 h-4" />
             </button>
           )}
-          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-neutral-400 bg-neutral-200 rounded border border-neutral-300">
+          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-neutral-400 bg-neutral-100 rounded border border-neutral-200">
             ESC
           </kbd>
         </div>
@@ -235,17 +253,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     onClose();
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors flex items-start gap-3 ${
-                    isSelected ? 'bg-blue-50/80 text-neutral-900' : 'hover:bg-neutral-50'
+                  className={`p-2.5 rounded-lg cursor-pointer transition-colors flex items-start gap-3 ${
+                    isSelected ? 'bg-neutral-100 text-neutral-900' : 'hover:bg-neutral-50 text-neutral-700'
                   }`}
                 >
                   <div
-                    className={`shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-xs font-bold ${
-                      ch.volume === 1
-                        ? 'bg-blue-100 text-blue-800'
-                        : ch.volume === 2
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-purple-100 text-purple-800'
+                    className={`shrink-0 w-7 h-7 rounded flex items-center justify-center font-mono text-xs font-semibold ${
+                      isSelected ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700'
                     }`}
                   >
                     {ch.volume === 0 ? (ch.id.includes('rtos') ? 'RT' : 'EM') : ch.number}
@@ -257,7 +271,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         {ch.volume !== 0 ? (language === 'zh' ? `第 ${ch.number} 章: ` : `Chapter ${ch.number}: `) : ''}
                         {chTitle}
                       </h4>
-                      <span className="text-[10px] uppercase font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 shrink-0">
+                      <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 shrink-0 border border-neutral-200/60">
                         {ch.volume === 1 ? 'Vol 1' : ch.volume === 2 ? 'Vol 2' : (ch.id.includes('rtos') ? 'RTOS' : 'Embedded')}
                       </span>
                     </div>
@@ -276,7 +290,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       {displayTags.slice(0, 4).map(tag => (
                         <span
                           key={tag}
-                          className="text-[10px] px-1.5 py-0.2 bg-neutral-100 text-neutral-600 rounded font-medium"
+                          className="text-[10px] font-mono px-1.5 py-0.2 bg-white border border-neutral-200 text-neutral-600 rounded"
                         >
                           #{tag}
                         </span>
@@ -286,7 +300,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
                   <ArrowRight
                     className={`w-4 h-4 mt-2 shrink-0 transition-opacity ${
-                      isSelected ? 'text-blue-600 opacity-100' : 'opacity-0'
+                      isSelected ? 'text-neutral-900 opacity-100' : 'opacity-0'
                     }`}
                   />
                 </div>
@@ -296,20 +310,20 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         </div>
 
         {/* Footer shortcuts */}
-        <div className="px-4 py-2.5 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-500">
-          <div className="flex items-center gap-4">
+        <div className="px-4 py-2 bg-neutral-50 border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-500">
+          <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-white rounded border text-[10px]">↑</kbd>
-              <kbd className="px-1.5 py-0.5 bg-white rounded border text-[10px]">↓</kbd>
-              {language === 'zh' ? '导航' : 'Navigate'}
+              <kbd className="px-1 py-0.5 bg-white rounded border border-neutral-200 text-[10px] font-mono">↑</kbd>
+              <kbd className="px-1 py-0.5 bg-white rounded border border-neutral-200 text-[10px] font-mono">↓</kbd>
+              <span className="text-[11px]">{language === 'zh' ? '导航' : 'Navigate'}</span>
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-white rounded border text-[10px]">↵</kbd>
-              {language === 'zh' ? '选择打开' : 'Select'}
+              <kbd className="px-1.5 py-0.5 bg-white rounded border border-neutral-200 text-[10px] font-mono">↵</kbd>
+              <span className="text-[11px]">{language === 'zh' ? '选择' : 'Select'}</span>
             </span>
           </div>
-          <span className="text-neutral-400">
-            {language === 'zh' ? '系统设计笔记 • 快速索引' : 'System Design Notes Reference'}
+          <span className="text-[11px] text-neutral-400 font-mono">
+            {language === 'zh' ? '系统设计快速索引' : 'System Design Index'}
           </span>
         </div>
       </div>
