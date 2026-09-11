@@ -29,6 +29,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # The current Vite content loader still consumes ../../modemlog/*.md.
+      # Keep the repository hierarchy clean while presenting all embedded
+      # documents to the existing loader during the build only.
+      - name: Prepare embedded docs for site build
+        shell: bash
+        run: |
+          mkdir -p modemlog
+          cp embedded-systems/modemlog/*.md modemlog/
+          cp embedded-systems/rtos/*.md modemlog/
+
       - name: Build
         run: npm run build
 
