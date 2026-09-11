@@ -1,34 +1,39 @@
-# Modem 诊断系统设计
+# Modem / Networking 设计资料
 
-> [← 返回 Embedded Systems 总目录](../README.md)
+> 返回：[Embedded Systems 总目录](../README.md)
 
-## 当前设计入口
+本目录聚合 MCU ↔ Modem 诊断、网络、抓包与存储相关设计。文档沿用仓库既有章节风格按推荐阅读顺序编号：**01–03 为当前实施主线，04–07 为历史方案与演进记录**。
 
-- [统一设计基线：ModemLog、CHR双Socket与MCU本地抓包](diagnostics-unified-design.md)
-- [C++整体架构与交互契约](cpp-architecture-and-interactions.md)
-- [完整Mermaid流程图](modem-complete-mermaid-flows.md)
+## 当前实施主线
 
-当前约束：ModemLog独立Socket、CHR独立Socket；TCPDump在MCU侧lwIP收发路径只读镜像，不占第三个核间Socket。抓包采用私有静态快照池，不能长期占有正常网络pbuf；过载只丢抓包副本。建议一个Socket Reactor加一个Storage Owner，复用现有lwIP和驱动上下文。
+### 01. 统一设计基线
 
-方案含官方依据、RAM/吞吐计算、PCAP格式和实机验收计划。文档与伪代码尚未完成目标板编译、时序或性能验证，不承诺抓包零影响。
+- [01. STM32 ModemLog、CHR 与本地抓包统一设计](./01-diagnostics-unified-design.md)
+  - 当前有效基线：双 Socket Reactor、MCU 本地 Capture Tap、Storage Owner、静态有界缓冲与持久化 ACK 语义。
 
-## 历史设计与修正
+### 02. C++ 整体架构
 
-以下保留演进记录，不作为独立实施依据；发生冲突以统一设计基线为准。
+- [02. C++ 整体架构与交互契约](./02-cpp-architecture-and-interactions.md)
+  - 将统一设计落成接口、对象生命周期、线程边界、缓冲区所有权与安全停机协议。
 
-| 文档 | 状态与主要修正 |
-|---|---|
-| [最初日志写盘方案](stm32-lwip-modem-log-storage-design.md) | 单Socket草案；原子操作、写入与持久化边界已修订 |
-| [双网络域方案](modem-mcu-dual-netif-routing-design.md) | 地址域仍有价值；NAT只是可选拓扑，路由Hook不是完整隔离证明 |
-| [弹性线程池草案](multi-channel-elastic-worker-pool-design.md) | 不采用自删除前归还静态栈；TCPDump不再视为Modem独立输入通道 |
-| [早期架构审查](multi-channel-elastic-worker-pool-design-review.md) | 原pbuf_ref异步落盘建议已撤销；改成私有快照和双Socket Reactor |
+### 03. 完整流程图
 
-## 相关 RTOS 资料
+- [03. Modem 完整 Mermaid 架构与流程图](./03-modem-complete-mermaid-flows.md)
+  - 与 01、02 保持一致的端到端数据流、异常流、状态机和时序图。
 
-- [资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](../rtos/resource-constrained-embedded-rtos-architecture.md)
+## 历史方案与演进记录
 
-## 设计演进
+以下资料保留用于方案演进、设计取舍复盘和代码审查，不作为当前实施基线。
 
-本次统一更新明确了本地抓包位置，重整两路Socket与Storage职责，重写流程图并标记历史方案；补充C++静态组合、类与任务映射、跨线程控制、缓冲所有权和显式停机协议。源码依据来自上游lwIP、FreeRTOS、FatFs、libpcap、PCAP格式资料与C++语言文档；详见各文档脚注和源码指纹。
+- [04. STM32 + lwIP Modem 日志接收与本地存储方案](./04-stm32-lwip-modem-log-storage-design.md)
+- [05. Modem + MCU 双网络域 / 双 netif 路由设计](./05-modem-mcu-dual-netif-routing-design.md)
+- [06. 多通道弹性 Worker Pool 设计](./06-multi-channel-elastic-worker-pool-design.md)
+- [07. 多通道弹性 Worker Pool 设计审查](./07-multi-channel-elastic-worker-pool-design-review.md)
 
-后续实施先确认STM32型号、lwIP版本、总RAM、WAN峰值pps、SD最坏停顿和CHR可靠性要求。
+## 推荐阅读路径
+
+`01 统一设计基线 → 02 C++ 架构 → 03 流程图 → 04–07 历史方案与审查`
+
+## 相关主题
+
+- [RTOS：资源受限嵌入式系统架构设计与核心机制](../rtos/resource-constrained-embedded-rtos-architecture.md)
