@@ -10,16 +10,11 @@ Check the notes here: https://pagefy.io/system-design/system-design-interview-by
 
 **Note:** These notes are a work in progress. 
 
-## 🔧 Embedded Systems / RTOS Research
+## 🔧 Embedded Systems
 
-- [资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](./modemlog/resource-constrained-embedded-rtos-architecture.md)
-  - 静态内存与链接期资源收敛
-  - 少任务 + 事件驱动 + Active Object / HSM
-  - ISR、临界区、MSP/PSP 与栈防御
-  - SPSC 无锁 Ring Buffer 与 Task Notification
-  - Watchdog Supervisor 与 Tickless Idle
-  - FreeRTOS / RT-Thread Nano / Zephyr 裁剪与选型
-  - 工程检查清单、WCET/栈/故障注入验证流程
+- [Embedded Systems 总目录](./embedded-systems/)
+- [RTOS：资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](./embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
+- [Modem / Networking：Modem 诊断与 MCU 网络架构](./embedded-systems/modemlog/)
 
 
  * [Chapter 1 - Scale From Zero To Millions Of Users](./01.%20Scaling/)
