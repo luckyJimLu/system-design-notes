@@ -27,22 +27,32 @@ jobs:
           chapters = Path('src/data/chaptersData.ts')
           text = chapters.read_text(encoding='utf-8')
 
-          replacements = {
-              "const fileA = a.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';":
-              "const fileA = a.split('/').pop()?.replace('.md', '').replace(/^\\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';",
-              "const fileB = b.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';":
-              "const fileB = b.split('/').pop()?.replace('.md', '').replace(/^\\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';",
-              "    const fileName = key.split('/').pop() || '';\n    const baseKey = fileName.replace('.md', '').toLowerCase().replace(/-/g, '_');\n    const info = embeddedMeta[baseKey];":
-              "    const fileName = key.split('/').pop() || '';\n    // Modem documents use a visible NN- prefix while metadata and route IDs stay stable.\n    const stableFileName = fileName.replace(/^\\d{2}-/, '');\n    const baseKey = stableFileName.replace('.md', '').toLowerCase().replace(/-/g, '_');\n    const info = embeddedMeta[baseKey];",
-              "    const cleanTitle = fileName\n      .replace('.md', '')":
-              "    const cleanTitle = stableFileName\n      .replace('.md', '')",
-              "      id: `embedded-${fileName.replace('.md', '')}`,":
-              "      id: `embedded-${stableFileName.replace('.md', '')}`,
-          }
+          replacements = [
+              (
+                  "const fileA = a.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';",
+                  "const fileA = a.split('/').pop()?.replace('.md', '').replace(/^\\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';",
+              ),
+              (
+                  "const fileB = b.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';",
+                  "const fileB = b.split('/').pop()?.replace('.md', '').replace(/^\\d{2}-/, '').toLowerCase().replace(/-/g, '_') || '';",
+              ),
+              (
+                  "    const fileName = key.split('/').pop() || '';\n    const baseKey = fileName.replace('.md', '').toLowerCase().replace(/-/g, '_');\n    const info = embeddedMeta[baseKey];",
+                  "    const fileName = key.split('/').pop() || '';\n    // Modem documents use a visible NN- prefix while metadata and route IDs stay stable.\n    const stableFileName = fileName.replace(/^\\d{2}-/, '');\n    const baseKey = stableFileName.replace('.md', '').toLowerCase().replace(/-/g, '_');\n    const info = embeddedMeta[baseKey];",
+              ),
+              (
+                  "    const cleanTitle = fileName\n      .replace('.md', '')",
+                  "    const cleanTitle = stableFileName\n      .replace('.md', '')",
+              ),
+              (
+                  "      id: `embedded-${fileName.replace('.md', '')}` ,".replace('` ,', '`,'),
+                  "      id: `embedded-${stableFileName.replace('.md', '')}` ,".replace('` ,', '`,'),
+              ),
+          ]
 
-          for old, new in replacements.items():
+          for old, new in replacements:
               if old not in text:
-                  raise SystemExit(f'Expected chaptersData pattern not found: {old[:80]}')
+                  raise SystemExit(f'Expected chaptersData pattern not found: {old[:100]}')
               text = text.replace(old, new, 1)
 
           chapters.write_text(text, encoding='utf-8')
