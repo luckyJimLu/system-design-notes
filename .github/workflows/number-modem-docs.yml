@@ -37,7 +37,7 @@ jobs:
               "    const cleanTitle = fileName\n      .replace('.md', '')":
               "    const cleanTitle = stableFileName\n      .replace('.md', '')",
               "      id: `embedded-${fileName.replace('.md', '')}`,":
-              "      id: `embedded-${stableFileName.replace('.md', '')}`,")
+              "      id: `embedded-${stableFileName.replace('.md', '')}`,
           }
 
           for old, new in replacements.items():
