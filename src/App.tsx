@@ -10,12 +10,26 @@ import { SearchModal } from './components/SearchModal';
 import { CheatSheetModal } from './components/CheatSheetModal';
 import { ResourcesView } from './components/ResourcesView';
 
+function resolveChapterIdFromHash(rawId: string): string | null {
+  if (ALL_CHAPTERS.some(c => c.id === rawId)) return rawId;
+  if (rawId.startsWith('modem-')) {
+    const alt = rawId.replace(/^modem-/, 'embedded-');
+    if (ALL_CHAPTERS.some(c => c.id === alt)) return alt;
+  }
+  if (rawId.startsWith('embedded-')) {
+    const alt = rawId.replace(/^embedded-/, 'modem-');
+    if (ALL_CHAPTERS.some(c => c.id === alt)) return alt;
+  }
+  return null;
+}
+
 export default function App() {
   const [currentChapterId, setCurrentChapterId] = useState<string>(() => {
     const hash = window.location.hash;
     if (hash.startsWith('#/chapter/')) {
       const id = hash.replace('#/chapter/', '');
-      if (ALL_CHAPTERS.some(c => c.id === id)) return id;
+      const resolved = resolveChapterIdFromHash(id);
+      if (resolved) return resolved;
     }
     return ALL_CHAPTERS[0]?.id || 'chapter-1';
   });
@@ -93,8 +107,9 @@ export default function App() {
         setIsResourcesView(true);
       } else if (hash.startsWith('#/chapter/')) {
         const id = hash.replace('#/chapter/', '');
-        if (ALL_CHAPTERS.some(c => c.id === id)) {
-          setCurrentChapterId(id);
+        const resolved = resolveChapterIdFromHash(id);
+        if (resolved) {
+          setCurrentChapterId(resolved);
           setIsResourcesView(false);
         }
       }

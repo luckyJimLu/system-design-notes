@@ -2,13 +2,22 @@ import { Chapter, HeadingItem } from '../types';
 
 // Load all markdown files at build time
 const markdownModules = import.meta.glob<string>(
-  ['../../[0-9]*/*.md', '../../modemlog/*.md', '../../Readme.md'],
+  [
+    '../../[0-9]*/*.md',
+    '../../embedded-systems/**/*.md',
+    '../../modemlog/*.md',
+    '../../Readme.md'
+  ],
   { query: '?raw', import: 'default', eager: true }
 ) as Record<string, string>;
 
 // Load all image assets so Vite bundles and resolves their URLs automatically
 const imageModules = import.meta.glob<string>(
-  ['../../[0-9]*/**/images/*.png', '../../modemlog/**/images/*.png'],
+  [
+    '../../[0-9]*/**/images/*.png',
+    '../../embedded-systems/**/images/*.png',
+    '../../modemlog/**/images/*.png'
+  ],
   { query: '?url', import: 'default', eager: true }
 ) as Record<string, string>;
 
@@ -466,42 +475,169 @@ const chapterMeta: Record<
   }
 };
 
-// Modem chapters bilingual mapping
-const modemMetaZh: Record<string, { titleZh: string; descZh: string; tagsZh: string[] }> = {
+// Embedded & Modem chapters bilingual mapping with ordering
+export interface EmbeddedDocMeta {
+  titleEn?: string;
+  titleZh: string;
+  descEn?: string;
+  descZh: string;
+  tagsEn?: string[];
+  tagsZh?: string[];
+  order: number;
+}
+
+export const embeddedMeta: Record<string, EmbeddedDocMeta> = {
+  resource_constrained_embedded_rtos_architecture: {
+    titleEn: 'Resource-Constrained Embedded RTOS Architecture Design & Core Mechanisms',
+    titleZh: '资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告',
+    descEn:
+      'In-depth study on deterministic real-time embedded systems under tight resource limits: static memory allocation, Active Object / HSM, ISR/critical section latency bounds, lock-free SPSC ring buffers, watchdog supervisor, tickless idle low-power races, and FreeRTOS / RT-Thread / Zephyr kernel pruning.',
+    descZh:
+      '面向数KB~数十KB SRAM与低主频MCU的确定性嵌入式架构研究：静态内存收敛、少任务+活动对象(Active Object)/层次化状态机(HSM)、ISR与临界区时延边界、SPSC无锁环形缓冲、位掩码看门狗健康监控、Tickless Idle低功耗竞态防御，以及FreeRTOS/RT-Thread/Zephyr内核极致裁剪与工程落地验证。',
+    tagsEn: ['RTOS', 'Embedded Systems', 'FreeRTOS', 'Static Memory', 'SPSC RingBuffer', 'Watchdog', 'Low Power'],
+    tagsZh: ['RTOS实时系统', '嵌入式架构', '静态内存', '无锁环形缓冲', '看门狗监控', '低功耗Tickless', 'FreeRTOS裁剪'],
+    order: 1
+  },
+  diagnostics_unified_design: {
+    titleEn: 'STM32 ModemLog, CHR & Local Packet Capture Unified Design',
+    titleZh: 'STM32 ModemLog、CHR 与本地抓包统一设计基线',
+    descEn:
+      'Unified firmware diagnostic architecture: independent ModemLog and CHR sockets, MCU-side lwIP packet capture tap with private snapshot pool, dual-task Socket Reactor & Storage Owner, bounded drop semantics, and PCAP serialization.',
+    descZh:
+      '统一固件诊断架构设计：ModemLog与CHR双独立Socket、MCU本地lwIP收发路径只读抓包镜像与私有快照池、双任务(Socket Reactor + Storage Owner)并发模型、故障退让与PCAP文件序列化落盘。',
+    tagsEn: ['ModemLog', 'CHR', 'Packet Capture', 'lwIP', 'PCAP', 'Firmware Design'],
+    tagsZh: ['Modem诊断', '双Socket', '本地抓包', 'lwIP协议栈', 'PCAP格式', 'StorageOwner'],
+    order: 2
+  },
+  cpp_architecture_and_interactions: {
+    titleEn: 'C++ Architecture: Dual Socket & Local TCPDump Interaction Contracts',
+    titleZh: 'C++ 实现架构：双 Socket 与本地 TCPDump 交互契约',
+    descEn:
+      'C++17 static composition for embedded diagnostics: class-to-task mappings, non-copyable buffer leases, lock-free publication, C trampoline bindings for FreeRTOS & lwIP, and asynchronous quiescence & stop protocols.',
+    descZh:
+      '现代嵌入式C++17静态组合架构：类职责与双任务映射、不可复制缓冲Lease所有权管理、内存序无锁发布、lwIP与FreeRTOS C语言Trampoline适配、以及确定性显式异步关停协议。',
+    tagsEn: ['C++17', 'Embedded C++', 'Ownership Model', 'Zero Allocation', 'FreeRTOS', 'lwIP'],
+    tagsZh: ['现代C++17', '嵌入式C++', '所有权Lease', '无堆分配', 'FreeRTOS', 'lwIP适配'],
+    order: 3
+  },
+  modem_complete_mermaid_flows: {
+    titleEn: 'Modem Diagnostic System Complete Mermaid Flowcharts',
+    titleZh: 'Modem 诊断系统完整 Mermaid 架构与流程图',
+    descEn:
+      'Comprehensive visual specifications: end-to-end data flow, Socket Reactor scheduling, capture tap pass-through, buffer slot ownership state machines, dual network isolation, and quiescence sequences.',
+    descZh:
+      '全套高清晰架构可视化流程图：端到端双Socket数据流、Reactor公平调度时序、CaptureTap失败放行、环形槽位所有权状态机、双网络域出口隔离与安全停机时序。',
+    tagsEn: ['Mermaid', 'Architecture Diagrams', 'State Machine', 'Sequence Diagram', 'Data Flow'],
+    tagsZh: ['Mermaid图表', '系统架构图', '状态机迁移', '时序流程图', '数据流向'],
+    order: 4
+  },
+  stm32_lwip_modem_log_storage_design: {
+    titleEn: 'STM32 + lwIP Modem High-Speed Log Storage Design',
+    titleZh: 'STM32 + lwIP Modem 高速日志低资源写盘设计',
+    descEn:
+      'High-throughput 1 Mbps continuous log streaming into SD storage: SPSC byte ring buffers, non-blocking lwIP TCP sockets, FatFs aligned batch writes, and DMA synchronization boundaries.',
+    descZh:
+      '面向1 Mbps持续日志流的低资源可靠写盘方案：SPSC字节无锁环形缓冲、lwIP非阻塞接收与背压、FatFs大块对齐写盘、以及SDMMC DMA同步与持久化边界划分。',
+    tagsEn: ['STM32', 'lwIP', 'FatFs', 'SPSC Buffer', 'DMA', 'SD Storage'],
+    tagsZh: ['STM32', 'lwIP协议栈', 'FatFs文件系统', 'SPSC环形缓冲', 'SD卡写盘', 'DMA传输'],
+    order: 5
+  },
+  modem_mcu_dual_netif_routing_design: {
+    titleEn: 'Modem & MCU Dual Netif Routing & Domain Isolation Design',
+    titleZh: 'Modem 与 MCU 双网络域通信与路由隔离设计',
+    descEn:
+      'Dual network interface isolation: dedicated IPC domain (ipc0) vs WAN cellular uplink (wan0), anti-leakage policy routing hooks, packet filtering, and queue bandwidth arbitration.',
+    descZh:
+      '核间双网络接口隔离方案：核间专用网卡(ipc0)与公网蜂窝出口(wan0)严格分离、强制源/目的路由Hook防护、出入口防串线校验矩阵、以及多业务队列带宽加权仲裁。',
+    tagsEn: ['Dual Netif', 'Policy Routing', 'lwIP Hooks', 'Domain Isolation', 'IPC'],
+    tagsZh: ['双网卡架构', '策略路由', 'lwIP Hook', '网络隔离', '核间通信'],
+    order: 6
+  },
+  multi_channel_elastic_worker_pool_design: {
+    titleEn: 'ModemLog, TCPDump & CHR Multi-Channel Elastic Worker Pool Design',
+    titleZh: 'ModemLog、TCPDump、CHR 独立通道与弹性工作池设计',
+    descEn:
+      'Multi-channel diagnostics architecture: decoupling persistent business contexts from ephemeral worker threads, serial execution guarantees, generation-based session isolation, and static stack slot pooling.',
+    descZh:
+      '多业务通道解耦架构：持久业务上下文与瞬态Worker线程分离、同业务串行执行保证、基于Generation的会话隔离、以及固定栈槽复用避免堆碎片。',
+    tagsEn: ['Worker Pool', 'Multi-Channel', 'Generation Isolation', 'Static Tasks', 'FreeRTOS'],
+    tagsZh: ['工作线程池', '多通道解耦', 'Generation代际', '静态任务栈', 'FreeRTOS'],
+    order: 7
+  },
+  multi_channel_elastic_worker_pool_design_review: {
+    titleEn: 'ModemLog, TCPDump & CHR Architecture Review & Revision',
+    titleZh: 'ModemLog、TCPDump、CHR 独立通道架构审查与修订',
+    descEn:
+      'Critical architectural review and corrections: eliminating thread pool deletion hazards, enforcing true SPSC conditions, replacing dynamic queues with atomic ready bitmasks, and refining buffer ownership.',
+    descZh:
+      '关键工程审查与架构修正：剔除静态栈自删除竞态、规范SPSC单生产者约束、以原子Ready位图替代动态就绪队列、以及明确存储缓冲所有权生命周期。',
+    tagsEn: ['Architecture Review', 'Safety Audit', 'Race Conditions', 'Atomic Bitmask', 'Reliability'],
+    tagsZh: ['架构审查', '并发安全', '竞态消除', '原子位图', '可靠性加固'],
+    order: 8
+  },
+  // Legacy / fallback mappings
   gprs_network_communication: {
+    titleEn: 'GPRS Cellular Network Communication & Connection Management',
     titleZh: 'GPRS 蜂窝网络通信与连接管理',
+    descEn: 'Embedded cellular network communication link, AT command state machine, auto-reconnect and heartbeat keepalive.',
     descZh: '嵌入式蜂窝网络通信链路、AT 指令集状态机、掉线自动重连与心跳保活机制。',
-    tagsZh: ['蜂窝通信', 'GPRS', 'AT指令', '嵌入式', '状态机']
+    tagsEn: ['Cellular', 'GPRS', 'AT Commands', 'Embedded', 'State Machine'],
+    tagsZh: ['蜂窝通信', 'GPRS', 'AT指令', '嵌入式', '状态机'],
+    order: 20
   },
   gprs_ppp_connection: {
+    titleEn: 'GPRS PPP Dial-Up & Link Establishment',
     titleZh: 'GPRS PPP 协议拨号与链路建立',
+    descEn: 'PPP link establishment (LCP/PAP/CHAP/IPCP) and lightweight implementation in MCU / RTOS.',
     descZh: 'PPP (Point-to-Point Protocol) 链路建立流程 (LCP/PAP/CHAP/IPCP) 以及在单片机/RTOS 中的轻量级实现。',
-    tagsZh: ['PPP协议', '链路建立', '嵌入式网络', 'LCP', 'IPCP']
+    tagsEn: ['PPP', 'Link Establishment', 'Embedded Networking', 'LCP', 'IPCP'],
+    tagsZh: ['PPP协议', '链路建立', '嵌入式网络', 'LCP', 'IPCP'],
+    order: 21
   },
   gprs_transparent_transmission: {
+    titleEn: 'GPRS Transparent Data Transmission & UART Buffering',
     titleZh: 'GPRS 数据透传模式与串口通信',
+    descEn: 'Industrial transparent transmission architecture: DMA UART buffering, packet framing, and protocol pass-through.',
     descZh: '工业级数据透传 (Transparent Transmission) 架构：DMA 串口缓冲、数据帧分包与协议透明传输。',
-    tagsZh: ['数据透传', 'DMA串口', '工业物联网', '环形缓冲']
+    tagsEn: ['Transparent Transmission', 'DMA UART', 'IoT', 'RingBuffer'],
+    tagsZh: ['数据透传', 'DMA串口', '工业物联网', '环形缓冲'],
+    order: 22
   },
   gsm_network_architecture: {
+    titleEn: 'GSM Cellular Mobile Communication Architecture',
     titleZh: 'GSM 蜂窝移动通信网络架构',
+    descEn: 'Base stations, BSS/NSS network subsystems, signaling channels, and cellular terminal network registration/authentication.',
     descZh: '剖析蜂窝基站、BSS/NSS 网络子系统、信令信道划分以及手机终端驻网鉴权流程。',
-    tagsZh: ['GSM架构', '蜂窝基站', '信令信道', '移动通信']
+    tagsEn: ['GSM Architecture', 'Base Station', 'Signaling Channel', 'Mobile Network'],
+    tagsZh: ['GSM架构', '蜂窝基站', '信令信道', '移动通信'],
+    order: 23
   },
   gsm_network_time_synchronization: {
+    titleEn: 'GSM Base Station Time Synchronization & NTP Calibration',
     titleZh: 'GSM 基站网络授时与 NTP 对时机制',
+    descEn: 'Base station network timing, AT+CCLK parsing, high-precision RTC calibration, and industrial time synchronization.',
     descZh: '基站网络授时、AT+CCLK 指令解析、高精度 RTC 晶振校准以及工业场景下的时间同步方案。',
-    tagsZh: ['网络授时', 'NTP', 'RTC校准', '基站时间']
+    tagsEn: ['Network Timing', 'NTP', 'RTC Calibration', 'Base Station Time'],
+    tagsZh: ['网络授时', 'NTP', 'RTC校准', '基站时间'],
+    order: 24
   },
   tcp_ip_dual_netif: {
+    titleEn: 'TCP/IP Dual Netif Routing & Failover Architecture',
     titleZh: 'TCP/IP 双网卡 (Dual Netif) 路由与容灾',
+    descEn: 'Ethernet + 4G cellular dual interface coexistence: dynamic routing priorities, heartbeat probing, and multihomed failover.',
     descZh: '以太网 + 4G 蜂窝双网卡共存架构：路由表优先级动态切换、心跳探测与多宿主故障转移。',
-    tagsZh: ['双网卡', '路由切换', '容灾高可用', 'TCP/IP', 'LwIP']
+    tagsEn: ['Dual Netif', 'Routing Failover', 'High Availability', 'TCP/IP', 'lwIP'],
+    tagsZh: ['双网卡', '路由切换', '容灾高可用', 'TCP/IP', 'LwIP'],
+    order: 25
   },
   uart_buffer_design: {
+    titleEn: 'High-Performance Ring Buffer UART Driver Design',
     titleZh: '高性能环形缓冲串口驱动设计 (Ring Buffer)',
+    descEn: 'Lock-free ring buffer design: pointer wraparound calculations, DMA ping-pong buffering, and overflow prevention.',
     descZh: '高并发无锁环形缓冲区设计：指针回绕计算、DMA 乒乓缓冲与避免串口溢出丢包。',
-    tagsZh: ['串口驱动', '环形缓冲', 'RingBuffer', '无锁队列', 'DMA']
+    tagsEn: ['UART Driver', 'Ring Buffer', 'Lock-Free', 'DMA'],
+    tagsZh: ['串口驱动', '环形缓冲', 'RingBuffer', '无锁队列', 'DMA'],
+    order: 26
   }
 };
 
@@ -558,20 +694,49 @@ export function getChapters(): Chapter[] {
     }
   }
 
-  // 2. Process Modemlog and advanced engineering documents
-  const modemLogFiles = Object.keys(markdownModules)
-    .filter(k => k.includes('/modemlog/'))
-    .sort();
+  // 2. Process Embedded Systems, RTOS, Modemlog and advanced engineering documents
+  const rawEmbeddedKeys = Object.keys(markdownModules).filter(k => {
+    const isEmbeddedOrModem = k.includes('/embedded-systems/') || k.includes('/modemlog/');
+    const isReadme = k.toLowerCase().endsWith('/readme.md');
+    return isEmbeddedOrModem && !isReadme;
+  });
 
-  let modemIndex = 101;
+  // Sort with preference for embedded-systems path over modemlog path for clean deduplication
+  rawEmbeddedKeys.sort((a, b) => {
+    if (a.includes('/embedded-systems/') && !b.includes('/embedded-systems/')) return -1;
+    if (!a.includes('/embedded-systems/') && b.includes('/embedded-systems/')) return 1;
+    return a.localeCompare(b);
+  });
 
-  for (const key of modemLogFiles) {
+  const seenFileNames = new Set<string>();
+  const uniqueKeys: string[] = [];
+
+  for (const key of rawEmbeddedKeys) {
+    const fileName = key.split('/').pop() || '';
+    const norm = fileName.toLowerCase();
+    if (!seenFileNames.has(norm)) {
+      seenFileNames.add(norm);
+      uniqueKeys.push(key);
+    }
+  }
+
+  // Sort unique keys according to embeddedMeta order
+  uniqueKeys.sort((a, b) => {
+    const fileA = a.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';
+    const fileB = b.split('/').pop()?.replace('.md', '').toLowerCase().replace(/-/g, '_') || '';
+    const orderA = embeddedMeta[fileA]?.order ?? 999;
+    const orderB = embeddedMeta[fileB]?.order ?? 999;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.localeCompare(b);
+  });
+
+  let embeddedIndex = 101;
+
+  for (const key of uniqueKeys) {
     const rawMarkdown = markdownModules[key] || '';
     const fileName = key.split('/').pop() || '';
-    if (fileName.toLowerCase() === 'readme.md') continue;
-
     const baseKey = fileName.replace('.md', '').toLowerCase().replace(/-/g, '_');
-    const zhInfo = modemMetaZh[baseKey];
+    const info = embeddedMeta[baseKey];
 
     const cleanTitle = fileName
       .replace('.md', '')
@@ -581,23 +746,25 @@ export function getChapters(): Chapter[] {
 
     const wordCount = rawMarkdown.split(/\s+/).filter(Boolean).length;
     const readTime = Math.max(3, Math.round(wordCount / 200));
+    const cleanFolder = key.replace(/^\.\.\/\.\.\//, '').replace(/\/[^/]+$/, '');
 
     chapters.push({
-      id: `modem-${fileName.replace('.md', '')}`,
-      folderName: 'modemlog',
+      id: `embedded-${fileName.replace('.md', '')}`,
+      folderName: cleanFolder,
       fileName,
-      number: modemIndex++,
-      title: cleanTitle,
-      titleZh: zhInfo?.titleZh || cleanTitle,
+      number: embeddedIndex++,
+      title: info?.titleEn || cleanTitle,
+      titleZh: info?.titleZh || cleanTitle,
       volume: 0,
       category: 'embedded-systems',
       description:
+        info?.descEn ||
         'In-depth embedded firmware, RTOS, and dual netif networking architecture design document.',
       descriptionZh:
-        zhInfo?.descZh ||
+        info?.descZh ||
         '深入剖析嵌入式实时操作系统 (RTOS)、固件协议栈与网络接口架构设计。',
-      tags: ['Embedded', 'Modem', 'C++', 'Networking', 'Firmware', 'STM32'],
-      tagsZh: zhInfo?.tagsZh || ['嵌入式', '通信模组', '固件', '网络栈', 'STM32'],
+      tags: info?.tagsEn || ['Embedded', 'RTOS', 'Firmware', 'STM32', 'Networking'],
+      tagsZh: info?.tagsZh || ['嵌入式', 'RTOS', '固件', 'STM32', '网络栈'],
       markdown: rawMarkdown,
       estimatedReadTimeMinutes: readTime
     });

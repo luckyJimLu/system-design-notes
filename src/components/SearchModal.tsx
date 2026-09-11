@@ -248,7 +248,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         : 'bg-purple-100 text-purple-800'
                     }`}
                   >
-                    {ch.volume === 0 ? 'SYS' : ch.number}
+                    {ch.volume === 0 ? (ch.id.includes('rtos') ? 'RT' : 'EM') : ch.number}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -258,7 +258,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                         {chTitle}
                       </h4>
                       <span className="text-[10px] uppercase font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 shrink-0">
-                        {ch.volume === 1 ? 'Vol 1' : ch.volume === 2 ? 'Vol 2' : 'Modem Systems'}
+                        {ch.volume === 1 ? 'Vol 1' : ch.volume === 2 ? 'Vol 2' : (ch.id.includes('rtos') ? 'RTOS' : 'Embedded')}
                       </span>
                     </div>
 

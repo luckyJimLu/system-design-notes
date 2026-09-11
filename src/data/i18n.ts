@@ -113,7 +113,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       all: 'All',
       vol1: 'Vol 1 (15)',
       vol2: 'Vol 2 (13)',
-      modem: 'Modem (7)',
+      modem: 'Embedded / RTOS',
       saved: 'Saved'
     },
     sidebar: {
@@ -136,7 +136,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
     chapter: {
       vol1: 'Volume 1',
       vol2: 'Volume 2',
-      modem: 'Modem Architecture',
+      modem: 'Embedded & RTOS Architecture',
       chapterPrefix: 'Chapter',
       minRead: 'min read',
       bookmark: 'Bookmark',
@@ -152,14 +152,14 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       onThisPage: 'On this page'
     },
     searchModal: {
-      inputPlaceholder: "Search all 35 chapters, topics, tags (e.g. 'rate limiter', 'kafka', 'quadtree')...",
+      inputPlaceholder: "Search all 36 chapters, topics, tags (e.g. 'rate limiter', 'RTOS', 'ring buffer')...",
       noResults: 'No matching chapters or architecture concepts found for',
       navigateTip: 'Navigate',
       selectTip: 'Select',
-      footerTitle: 'System Design Notes Reference',
+      footerTitle: 'System Design & Embedded Systems Reference',
       vol1Badge: 'Vol 1',
       vol2Badge: 'Vol 2',
-      modemBadge: 'Modem'
+      modemBadge: 'Embedded / RTOS'
     },
     cheatSheet: {
       badge: 'System Design Quick Reference',
@@ -214,7 +214,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       all: '全部',
       vol1: '第一卷 (15)',
       vol2: '第二卷 (13)',
-      modem: '嵌入式/Modem (7)',
+      modem: '嵌入式 / RTOS',
       saved: '收藏夹'
     },
     sidebar: {
@@ -237,7 +237,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
     chapter: {
       vol1: '第一卷',
       vol2: '第二卷',
-      modem: '嵌入式与通信架构',
+      modem: '嵌入式 / RTOS 与通信架构',
       chapterPrefix: '第',
       minRead: '预计阅读',
       bookmark: '收藏',
@@ -253,14 +253,14 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       onThisPage: '本章大纲目录'
     },
     searchModal: {
-      inputPlaceholder: "搜索全部 35 个章节、架构概念、技术标签 (如 '限流器', 'kafka', '一致性哈希', '四叉树')...",
+      inputPlaceholder: "搜索全部 36 个章节、架构概念、技术标签 (如 '限流器', 'RTOS', '环形缓冲', '双网卡')...",
       noResults: '未找到相关章节或架构概念：',
       navigateTip: '上下移动',
       selectTip: '回车进入',
-      footerTitle: '系统设计面试笔记与参考知识库',
+      footerTitle: '系统设计与嵌入式系统知识库',
       vol1Badge: '第1卷',
       vol2Badge: '第2卷',
-      modemBadge: '底层通信'
+      modemBadge: '嵌入式 / RTOS'
     },
     cheatSheet: {
       badge: '系统设计面试必备常数',

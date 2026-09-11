@@ -183,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 : 'text-neutral-600 hover:bg-neutral-100'
             }`}
           >
-            {t.tabs.modem}
+            {t.tabs.modem} ({chapters.filter(c => c.volume === 0).length})
           </button>
           <button
             type="button"
@@ -242,7 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           : 'bg-purple-100 text-purple-800'
                       }`}
                     >
-                      {ch.volume === 0 ? 'M' : ch.number}
+                      {ch.volume === 0 ? (ch.id.includes('rtos') ? 'RT' : 'EM') : ch.number}
                     </span>
 
                     <span className="truncate leading-tight">
