@@ -1,12 +1,18 @@
-import React, { useId } from 'react';
-import { Copy, Check } from 'lucide-react';
+import React, { useEffect, useId, useState } from 'react';
+import { Check, Copy, Pencil, RotateCcw, Save, X } from 'lucide-react';
 
 interface TextFlowchartProps {
   source: string;
-  onCopy: () => void;
+  onCopy: (source: string) => void;
   copied: boolean;
   copyLabel: string;
   copiedLabel: string;
+  editLabel: string;
+  saveLabel: string;
+  cancelLabel: string;
+  resetLabel: string;
+  editorHint: string;
+  invalidLabel: string;
 }
 
 interface FlowLayout {
@@ -75,42 +81,101 @@ export const TextFlowchart: React.FC<TextFlowchartProps> = ({
   copied,
   copyLabel,
   copiedLabel,
+  editLabel,
+  saveLabel,
+  cancelLabel,
+  resetLabel,
+  editorHint,
+  invalidLabel,
 }) => {
   const diagramId = useId().replace(/:/g, '');
-  const layout = parseFlow(source);
-  if (!layout) return null;
+  const [currentSource, setCurrentSource] = useState(source);
+  const [draft, setDraft] = useState(source);
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    setCurrentSource(source);
+    setDraft(source);
+    setIsEditing(false);
+  }, [source]);
+
+  const previewSource = isEditing ? draft : currentSource;
+  const layout = parseFlow(previewSource);
+  if (!layout && !isEditing) return null;
+
+  const startEditing = () => {
+    setDraft(currentSource);
+    setIsEditing(true);
+  };
+  const saveDraft = () => {
+    if (!parseFlow(draft)) return;
+    setCurrentSource(draft);
+    setIsEditing(false);
+  };
+  const cancelEditing = () => {
+    setDraft(currentSource);
+    setIsEditing(false);
+  };
 
   const nodeWidth = 216;
   const nodeHeight = 64;
   const gap = 40;
   const padding = 24;
-  const isHorizontal = layout.direction === 'horizontal';
-  const width = isHorizontal
+  const isHorizontal = layout?.direction === 'horizontal';
+  const width = isHorizontal && layout
     ? padding * 2 + layout.steps.length * nodeWidth + (layout.steps.length - 1) * gap
     : nodeWidth + padding * 2;
-  const height = isHorizontal
+  const height = isHorizontal && layout
     ? nodeHeight + 112
-    : padding * 2 + layout.steps.length * nodeHeight + (layout.steps.length - 1) * gap + 48;
+    : layout
+      ? padding * 2 + layout.steps.length * nodeHeight + (layout.steps.length - 1) * gap + 48
+      : 0;
   const nodeX = isHorizontal ? padding : padding;
 
   return (
     <div className="my-6 overflow-hidden rounded-xl border border-neutral-200/90 bg-white shadow-2xs">
-      <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-3.5 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 bg-neutral-50 px-3.5 py-2">
         <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
           flowchart
         </span>
-        <button
-          type="button"
-          onClick={onCopy}
-          className="flex items-center gap-1 rounded px-1 text-[11px] text-neutral-500 transition-colors hover:text-neutral-900 focus-visible:ring-1 focus-visible:ring-neutral-400"
-          aria-label={copied ? copiedLabel : copyLabel}
-        >
-          {copied ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-          <span className={copied ? 'text-emerald-700' : undefined}>{copied ? copiedLabel : copyLabel}</span>
-        </button>
+        <div className="flex items-center gap-1">
+          {!isEditing ? (
+            <>
+              <button type="button" onClick={startEditing} className="flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 focus-visible:ring-1 focus-visible:ring-neutral-400" aria-label={editLabel}>
+                <Pencil className="h-3 w-3" /><span>{editLabel}</span>
+              </button>
+              <button type="button" onClick={() => onCopy(currentSource)} className="flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 focus-visible:ring-1 focus-visible:ring-neutral-400" aria-label={copied ? copiedLabel : copyLabel}>
+                {copied ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                <span className={copied ? 'text-emerald-700' : undefined}>{copied ? copiedLabel : copyLabel}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={saveDraft} disabled={!parseFlow(draft)} className="flex items-center gap-1 rounded bg-neutral-900 px-2 py-1 text-[11px] text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:ring-1 focus-visible:ring-neutral-400">
+                <Save className="h-3 w-3" /><span>{saveLabel}</span>
+              </button>
+              <button type="button" onClick={cancelEditing} className="flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-neutral-500 transition-colors hover:bg-white hover:text-neutral-900 focus-visible:ring-1 focus-visible:ring-neutral-400" aria-label={cancelLabel}>
+                <X className="h-3 w-3" /><span>{cancelLabel}</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="flowchart-scroll overflow-x-auto px-2 py-3 sm:px-4 sm:py-4">
+      {isEditing && (
+        <div className="border-b border-neutral-200 bg-neutral-50/70 px-3.5 py-3">
+          <textarea value={draft} onChange={event => setDraft(event.target.value)} className="min-h-24 w-full resize-y rounded-md border border-neutral-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed text-neutral-800 outline-none transition-colors focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10" aria-label={editLabel} spellCheck={false} />
+          <div className="mt-2 flex items-start justify-between gap-3 text-[11px] text-neutral-500">
+            <span>{editorHint}</span>
+            <button type="button" onClick={() => setDraft(source)} className="inline-flex shrink-0 items-center gap-1 hover:text-neutral-900">
+              <RotateCcw className="h-3 w-3" /><span>{resetLabel}</span>
+            </button>
+          </div>
+          {!layout && <p className="mt-2 text-[11px] font-medium text-amber-700">{invalidLabel}</p>}
+        </div>
+      )}
+
+      {layout ? <div className="flowchart-scroll overflow-x-auto px-2 py-3 sm:px-4 sm:py-4">
         <svg
           className="flowchart-svg mx-auto block"
           width={width}
@@ -182,7 +247,7 @@ export const TextFlowchart: React.FC<TextFlowchartProps> = ({
             );
           })}
         </svg>
-      </div>
+      </div> : <pre className="m-0 overflow-x-auto px-4 py-5 font-mono text-xs leading-relaxed text-neutral-600">{draft}</pre>}
     </div>
   );
 };

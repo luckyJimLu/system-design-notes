@@ -363,10 +363,16 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                   return (
                     <TextFlowchart
                       source={codeString}
-                      onCopy={() => handleCopyCode(codeString, codeId)}
+                      onCopy={(source) => handleCopyCode(source, codeId)}
                       copied={copiedCodeId === codeId}
                       copyLabel={t.chapter.copy}
                       copiedLabel={t.chapter.copied}
+                      editLabel={t.chapter.editFlowchart}
+                      saveLabel={t.chapter.saveFlowchart}
+                      cancelLabel={t.chapter.cancelFlowchart}
+                      resetLabel={t.chapter.resetFlowchart}
+                      editorHint={t.chapter.flowchartEditorHint}
+                      invalidLabel={t.chapter.invalidFlowchart}
                     />
                   );
                 }

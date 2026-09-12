@@ -45,6 +45,12 @@ export interface UIStrings {
     nextChapter: string;
     copy: string;
     copied: string;
+    editFlowchart: string;
+    saveFlowchart: string;
+    cancelFlowchart: string;
+    resetFlowchart: string;
+    flowchartEditorHint: string;
+    invalidFlowchart: string;
     expandDiagram: string;
     onThisPage: string;
   };
@@ -148,6 +154,12 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       nextChapter: 'Next Chapter',
       copy: 'Copy',
       copied: 'Copied',
+      editFlowchart: 'Edit',
+      saveFlowchart: 'Save',
+      cancelFlowchart: 'Cancel',
+      resetFlowchart: 'Reset',
+      flowchartEditorHint: 'Edit the arrow-separated steps. The preview updates as you type.',
+      invalidFlowchart: 'Add at least two steps connected by →, ->, or ↓ to preview the flowchart.',
       expandDiagram: 'Expand Diagram',
       onThisPage: 'On this page'
     },
@@ -249,6 +261,12 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       nextChapter: '下一章',
       copy: '复制代码',
       copied: '已复制',
+      editFlowchart: '编辑',
+      saveFlowchart: '保存',
+      cancelFlowchart: '取消',
+      resetFlowchart: '重置',
+      flowchartEditorHint: '编辑由箭头连接的步骤，预览会随输入实时更新。',
+      invalidFlowchart: '请至少输入两个由 →、-> 或 ↓ 连接的步骤，才能生成流程图。',
       expandDiagram: '点击放大架构图',
       onThisPage: '本章大纲目录'
     },
