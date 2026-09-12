@@ -28,3 +28,7 @@ boundary. It is intentionally small: importing a document with invalid
 navigation metadata can produce a diagnostic instead of breaking the entire
 site. The next integration step is replacing the legacy chapter metadata
 builder with a glob over `content/**/index*.md` that calls these functions.
+
+`loadImportedContentWithDiagnostics()` exposes structured diagnostics for an
+import screen or CI check. Errors include invalid metadata and duplicate IDs;
+warnings include generated fallback IDs and missing language variants.
