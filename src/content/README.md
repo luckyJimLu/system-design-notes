@@ -22,3 +22,9 @@ tags: [限流, Redis]
 
 This keeps content ownership separate from routing, search, bookmarks,
 responsive layout, and theme components.
+
+`frontmatter.ts` provides the first dependency-free parser and validation
+boundary. It is intentionally small: importing a document with invalid
+navigation metadata can produce a diagnostic instead of breaking the entire
+site. The next integration step is replacing the legacy chapter metadata
+builder with a glob over `content/**/index*.md` that calls these functions.
