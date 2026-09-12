@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ALL_CHAPTERS, extractHeadings } from './data/chaptersData';
+import { contentCatalog, extractHeadings } from './content/catalog';
 import { Chapter, Language } from './types';
 import { Sidebar } from './components/Sidebar';
 import { Navbar } from './components/Navbar';
@@ -9,6 +9,8 @@ import { ImageLightboxModal } from './components/ImageLightboxModal';
 import { SearchModal } from './components/SearchModal';
 import { CheatSheetModal } from './components/CheatSheetModal';
 import { ResourcesView } from './components/ResourcesView';
+
+const ALL_CHAPTERS = contentCatalog.documents;
 
 function resolveChapterIdFromHash(rawId: string): string | null {
   if (ALL_CHAPTERS.some(c => c.id === rawId)) return rawId;
