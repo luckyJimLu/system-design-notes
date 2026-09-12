@@ -32,3 +32,7 @@ builder with a glob over `content/**/index*.md` that calls these functions.
 `loadImportedContentWithDiagnostics()` exposes structured diagnostics for an
 import screen or CI check. Errors include invalid metadata and duplicate IDs;
 warnings include generated fallback IDs and missing language variants.
+
+The catalog uses a startup safety boundary: if imported content cannot be
+loaded, the existing legacy catalog remains available and the failure is
+recorded as `LOAD_FAILED` instead of leaving the entire WebUI blank.
