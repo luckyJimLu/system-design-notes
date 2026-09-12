@@ -22,6 +22,15 @@
   - C++ 固件架构与交互契约
   - MCU 本地抓包、存储与诊断
 
+### Embedded Networking
+
+- [Embedded Networking 总目录](networking/README.md)
+- [lwIP TCP/IP 协议栈：架构、内存、netif、API 与 RTOS 移植](networking/lwip-tcpip-deepwiki.md)
+  - NO_SYS=1 裸机与 NO_SYS=0 RTOS 模型
+  - tcpip_thread、pbuf/mem/memp、netif 与 RX/TX 调用链
+  - Raw / Netconn / Socket、TLS、PPPoS 与 RTOS 移植
+  - 调试、抓包、统计与故障排查
+
 ## 后续建议目录
 
 ```text
