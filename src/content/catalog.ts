@@ -1,5 +1,6 @@
 import { ALL_CHAPTERS, extractHeadings, resolveImageUrl } from '../data/chaptersData';
 import type { ContentCatalog } from './types';
+import { loadImportedContent } from './loader';
 
 /**
  * Content adapter used by the application shell.
@@ -10,8 +11,8 @@ import type { ContentCatalog } from './types';
  * changing navigation, search, or rendering components.
  */
 export const contentCatalog: ContentCatalog = {
-  documents: ALL_CHAPTERS,
-  getById: (id) => ALL_CHAPTERS.find((document) => document.id === id),
+  documents: [...ALL_CHAPTERS, ...loadImportedContent()],
+  getById: (id) => contentCatalog.documents.find((document) => document.id === id),
 };
 
 export { extractHeadings, resolveImageUrl };
