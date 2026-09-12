@@ -10,6 +10,90 @@ Check the notes here: https://pagefy.io/system-design/system-design-interview-by
 
 **Note:** These notes are a work in progress. 
 
+## 📖 内容驱动 WebUI 使用指南
+
+本项目将知识内容与 WebUI 渲染分离。新增文档时，通常只需添加 Markdown 文件，不需要修改 React 页面代码。
+
+### 1. 新增内容
+
+在 `content/` 下创建一个主题目录：
+
+```text
+content/
+└── 40-your-topic/
+    ├── index.zh.md
+    └── index.en.md
+```
+
+文件名使用 `index.zh.md` 或 `index.en.md`，系统会自动扫描、配对并加入导航、搜索和目录。
+
+### 2. 配置 front matter
+
+```md
+---
+id: your-topic
+title: 中文标题
+titleEn: English Title
+order: 40
+description: 文档摘要
+tags: [RTOS, TCP/IP]
+---
+
+# 正文标题
+
+这里直接编写 Markdown 内容。
+```
+
+`id` 应保持稳定，`order` 控制排序，`title` 和 `titleEn` 用于双语标题，`tags` 用于分类和检索。没有 front matter 的旧文档仍然兼容，但建议新文档完整配置元数据。
+
+### 3. 使用语义块
+
+目前支持 `callout`：
+
+````md
+```callout
+type=warning title="注意"
+这里是需要关注的内容。
+```
+````
+
+可用类型：`info`、`warning`、`danger`、`success`。未来可扩展 `diagram`、`comparison`、`checklist` 等渲染插件。
+
+### 4. 图片与资源
+
+将图片放在主题目录下，并在 Markdown 中使用相对路径：
+
+```text
+content/40-your-topic/images/architecture.png
+```
+
+```md
+![系统架构](./images/architecture.png)
+```
+
+### 5. 本地开发与构建
+
+```bash
+npm install
+npm run dev       # 启动开发服务器
+npm run lint      # TypeScript 检查
+npm run build     # 生产构建
+```
+
+导入链路为：
+
+```text
+Markdown → front matter Loader → ContentDocument
+→ ContentCatalog → 导航 / 搜索 / 目录 / WebUI
+```
+
+### 6. 嵌入式资料入口
+
+- [嵌入式系统总目录](./embedded-systems/README.md)
+- [RTOS 研究报告](./embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
+- [lwIP TCP/IP 协议栈](./embedded-systems/networking/lwip-tcpip-deepwiki.md)
+- [Modem / 网络诊断](./embedded-systems/modemlog/README.md)
+
 ## 🔧 Embedded Systems
 
 - [Embedded Systems 总目录](./embedded-systems/)
@@ -94,14 +178,3 @@ Check the notes here: https://pagefy.io/system-design/system-design-interview-by
 
 ### Youtube
 - [YouTube Architecture](http://highscalability.com/youtube-architecture)
-- [YouTube scalability 2012](https://www.youtube.com/watch?v=w5WVu624fY8)
-- [Transcoding Videos at Scale](https://www.egnyte.com/blog/2018/12/transcoding-how-we-serve-videos-at-scale/)
-- [Facebook Video Broadcasting](https://engineering.fb.com/ios/under-the-hood-broadcasting-live-video-to-millions/)
-- [Netflix Video Encoding at Scale](https://netflixtechblog.com/high-quality-video-encoding-at-scale-d159db052746)
-- [Netflix Shot based encoding](https://netflixtechblog.com/optimized-shot-based-encodes-now-streaming-4b9464204830)
-
-
-### Google Drive
-- [Differential Synchronization](https://neil.fraser.name/writing/sync/)
-- [Differential Synchronization Video](https://www.youtube.com/watch?v=S2Hp_1jqpY8)
-- [How We’ve Scaled Dropbox](https://www.youtube.com/watch?v=PE4gwstWhmc&feature=youtu.be)
