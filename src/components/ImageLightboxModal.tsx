@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download } from 'lucide-react';
 import { Language } from '../types';
+import { truncateTitle } from '../utils/title';
 
 interface ImageLightboxModalProps {
   src: string;
@@ -52,7 +53,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
       >
         <div className="flex flex-col">
           <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400">
-            {chapterTitle || (language === 'zh' ? '架构图' : 'Architecture Diagram')}
+            {truncateTitle(chapterTitle || (language === 'zh' ? '架构图' : 'Architecture Diagram'))}
           </span>
           <h3 className="text-sm font-semibold text-neutral-100 line-clamp-1">
             {alt || (language === 'zh' ? '系统设计架构图' : 'System Design Diagram')}
@@ -120,19 +121,19 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
 
       {/* Image canvas viewport */}
       <div
-        className="flex-1 overflow-auto flex items-center justify-center p-6 cursor-zoom-out"
+        className="lightbox-canvas flex-1 overflow-auto flex items-center justify-center p-4 sm:p-6 cursor-zoom-out"
         onClick={e => {
           if (e.target === e.currentTarget) onClose();
         }}
       >
         <div
-          className="transition-transform duration-150 ease-out max-w-full max-h-full flex items-center justify-center"
+          className="lightbox-image-shell transition-transform duration-150 ease-out flex items-center justify-center"
           style={{ transform: `scale(${scale})` }}
         >
           <img
             src={src}
             alt={alt || 'System design diagram'}
-            className="max-h-[82vh] max-w-[92vw] object-contain rounded-md shadow-2xl bg-white p-3 ring-1 ring-neutral-700 select-none cursor-default"
+            className="lightbox-image max-h-[82vh] max-w-[92vw] object-contain rounded-md shadow-2xl bg-white p-2 sm:p-3 ring-1 ring-neutral-700 select-none cursor-default"
             onClick={e => e.stopPropagation()}
           />
         </div>

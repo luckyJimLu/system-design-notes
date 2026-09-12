@@ -33,3 +33,55 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.6);
 }
+
+/* Diagram display: wide process flows should retain their working width while
+   tall reference diagrams remain bounded by the reading column. */
+.diagram-figure {
+  width: calc(100% + 2rem);
+  margin-left: -1rem;
+  margin-right: -1rem;
+}
+
+.diagram-frame {
+  width: min(100%, 1180px);
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-gutter: stable;
+}
+
+.diagram-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-image[data-orientation='landscape'] {
+  width: max-content;
+  min-width: min(100%, 720px);
+}
+
+.lightbox-canvas {
+  scrollbar-gutter: stable both-edges;
+}
+
+.lightbox-image-shell {
+  min-width: min-content;
+  min-height: min-content;
+}
+
+@media (max-width: 640px) {
+  .diagram-figure {
+    width: calc(100% + 1rem);
+    margin-left: -0.5rem;
+    margin-right: -0.5rem;
+  }
+
+  .diagram-frame {
+    border-radius: 0.75rem;
+  }
+
+  .diagram-image[data-orientation='landscape'] {
+    min-width: 640px;
+  }
+}

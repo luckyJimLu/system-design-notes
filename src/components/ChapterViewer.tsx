@@ -92,7 +92,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
       .replace(/\s+/g, '-');
   };
 
-  const currentTitle = language === 'zh' ? (chapter.titleZh || chapter.title) : chapter.title;
+  const fullCurrentTitle = language === 'zh' ? (chapter.titleZh || chapter.title) : chapter.title;
+  const currentTitle = truncateTitle(fullCurrentTitle);
   const currentDesc = language === 'zh' ? (chapter.descriptionZh || chapter.description) : chapter.description;
   const currentTags = language === 'zh' ? (chapter.tagsZh || chapter.tags) : chapter.tags;
 
@@ -164,12 +165,12 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
         </div>
 
         {/* Main Title */}
-        <h1 className="text-2xl sm:text-3xl lg:text-3.5xl font-bold text-neutral-900 tracking-tight leading-tight">
-          <span className="text-neutral-500 block text-xs font-mono font-semibold uppercase tracking-wider mb-1">
-            {language === 'zh'
-              ? (chapter.volume === 0 ? `第 ${chapter.number} 章 · 嵌入式与系统通信` : `第 ${chapter.number} 章`)
-              : (chapter.volume === 0 ? `Chapter ${chapter.number} · Embedded Systems` : `Chapter ${chapter.number}`)}
-          </span>
+        <h1 className="text-2xl sm:text-3xl lg:text-3.5xl font-bold text-neutral-900 tracking-tight leading-tight" title={fullCurrentTitle}>
+          {chapter.volume !== 0 && (
+            <span className="text-neutral-500 block text-xs font-mono font-semibold uppercase tracking-wider mb-1">
+              {language === 'zh' ? `第 ${chapter.number} 章` : `Chapter ${chapter.number}`}
+            </span>
+          )}
           {currentTitle}
         </h1>
 
@@ -401,9 +402,9 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               const resolvedSrc = resolveImageUrl(chapter.folderName, originalSrc);
 
               return (
-                <figure className="my-6 flex flex-col items-center">
+                <figure className="diagram-figure my-8 flex flex-col items-center">
                   <div
-                    className="group relative cursor-pointer overflow-hidden rounded-lg border border-neutral-200 bg-white p-2.5 sm:p-4 shadow-2xs hover:border-neutral-400 transition-colors max-w-full"
+                    className="diagram-frame group relative cursor-pointer rounded-xl border border-neutral-200/90 bg-white p-2 sm:p-3 shadow-2xs hover:border-neutral-400 transition-colors"
                     onClick={() => onOpenLightbox(resolvedSrc, alt)}
                     title={t.chapter.expandDiagram}
                     role="button"
@@ -419,8 +420,14 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                     <img
                       src={resolvedSrc}
                       alt={alt || 'System Architecture Diagram'}
-                      className="max-h-[500px] w-auto object-contain mx-auto transition-transform duration-150"
+                      className="diagram-image max-h-[680px] w-auto object-contain mx-auto transition-transform duration-150"
                       loading="lazy"
+                      onLoad={(event) => {
+                        const image = event.currentTarget;
+                        image.dataset.orientation = image.naturalWidth >= image.naturalHeight * 1.35
+                          ? 'landscape'
+                          : 'portrait';
+                      }}
                     />
                     <div className="absolute inset-0 bg-neutral-900/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                       <span className="bg-neutral-900/85 text-white text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 shadow-sm">
@@ -431,7 +438,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                   </div>
 
                   {alt && (
-                    <figcaption className="text-center text-xs text-neutral-500 mt-2 italic max-w-md">
+                    <figcaption className="text-center text-xs text-neutral-500 mt-3 italic max-w-2xl px-2">
                       {alt}
                     </figcaption>
                   )}
@@ -458,8 +465,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               {t.chapter.prevChapter}
             </span>
             <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-blue-700 transition-colors">
-              {language === 'zh' ? `第${prevChapter.number}章: ` : `Ch ${prevChapter.number}: `}
-              {language === 'zh' ? (prevChapter.titleZh || prevChapter.title) : prevChapter.title}
+              {prevChapter.volume !== 0 ? (language === 'zh' ? `第${prevChapter.number}章: ` : `Ch ${prevChapter.number}: `) : ''}
+              {truncateTitle(language === 'zh' ? (prevChapter.titleZh || prevChapter.title) : prevChapter.title)}
             </span>
           </button>
         ) : (
@@ -478,8 +485,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
             </span>
             <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-blue-700 transition-colors">
-              {language === 'zh' ? `第${nextChapter.number}章: ` : `Ch ${nextChapter.number}: `}
-              {language === 'zh' ? (nextChapter.titleZh || nextChapter.title) : nextChapter.title}
+              {nextChapter.volume !== 0 ? (language === 'zh' ? `第${nextChapter.number}章: ` : `Ch ${nextChapter.number}: `) : ''}
+              {truncateTitle(language === 'zh' ? (nextChapter.titleZh || nextChapter.title) : nextChapter.title)}
             </span>
           </button>
         ) : (
