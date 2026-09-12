@@ -14,6 +14,25 @@ const ALL_CHAPTERS = contentCatalog.documents;
 
 function resolveChapterIdFromHash(rawId: string): string | null {
   if (ALL_CHAPTERS.some(c => c.id === rawId)) return rawId;
+  // Support content prefix aliases
+  if (ALL_CHAPTERS.some(c => c.id === `content-${rawId}`)) return `content-${rawId}`;
+  if (rawId.startsWith('content-') && ALL_CHAPTERS.some(c => c.id === rawId.replace(/^content-/, ''))) {
+    return rawId.replace(/^content-/, '');
+  }
+  // Support numeric chapter aliases: e.g. "1" -> "chapter-1", "37" -> chapter with number 37
+  if (/^\d+$/.test(rawId)) {
+    const num = parseInt(rawId, 10);
+    const byId = ALL_CHAPTERS.find(c => c.id === `chapter-${num}`);
+    if (byId) return byId.id;
+    const byNum = ALL_CHAPTERS.find(c => c.number === num);
+    if (byNum) return byNum.id;
+  }
+  const matchCh = rawId.match(/^chapter-(\d+)$/);
+  if (matchCh) {
+    const num = parseInt(matchCh[1], 10);
+    const byNum = ALL_CHAPTERS.find(c => c.number === num);
+    if (byNum) return byNum.id;
+  }
   if (rawId.startsWith('modem-')) {
     const alt = rawId.replace(/^modem-/, 'embedded-');
     if (ALL_CHAPTERS.some(c => c.id === alt)) return alt;
@@ -190,7 +209,6 @@ export default function App() {
         completed={completed}
         onToggleBookmark={handleToggleBookmark}
         onToggleCompleted={handleToggleCompleted}
-        onOpenSearch={() => setIsSearchOpen(true)}
         onOpenCheatSheet={() => setIsCheatSheetOpen(true)}
         onOpenResources={handleOpenResources}
         isCurrentViewResources={isResourcesView}
@@ -239,7 +257,6 @@ export default function App() {
                     allChapters={ALL_CHAPTERS}
                     fontSize={fontSize}
                     language={language}
-                    onToggleLanguage={handleToggleLanguage}
                   />
                 </div>
 

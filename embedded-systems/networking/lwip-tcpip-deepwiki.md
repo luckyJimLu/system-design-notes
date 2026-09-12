@@ -1,7 +1,7 @@
 ---
 title: lwIP TCP/IP 协议栈：架构、内存、netif、API 与 RTOS 移植
-titleEn: lwIP TCP/IP Stack Architecture and Porting Guide
-order: 31
+titleEn: lwIP TCP/IP Stack Architecture, Memory, netif, API & RTOS Porting Guide
+order: 37
 category: networking
 tags: [lwIP, TCP/IP, RTOS, Ethernet, PPPoS, Modem]
 source: Library/lwIP_TCPIP_DeepWiki_技术整理_2026-08-21.docx

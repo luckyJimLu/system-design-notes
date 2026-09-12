@@ -262,13 +262,13 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       isSelected ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-700'
                     }`}
                   >
-                    {ch.volume === 0 ? (ch.id.includes('rtos') ? 'RT' : 'EM') : ch.number}
+                    {ch.number}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className="text-sm font-semibold text-neutral-900 truncate">
-                        {ch.volume !== 0 ? (language === 'zh' ? `第 ${ch.number} 章: ` : `Chapter ${ch.number}: `) : ''}
+                        {language === 'zh' ? `第 ${ch.number} 章: ` : `Chapter ${ch.number}: `}
                         {chTitle}
                       </h4>
                       <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 shrink-0 border border-neutral-200/60">

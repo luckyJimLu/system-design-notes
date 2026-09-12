@@ -95,17 +95,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Side Tools */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Language Switcher Button */}
+          {/* Language Switcher Button (Single Entry Point) */}
           <button
             id="navbar-lang-toggle"
             type="button"
             onClick={onToggleLanguage}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 transition-colors shadow-2xs focus-visible:ring-2 focus-visible:ring-neutral-900"
-            title={language === 'zh' ? 'Switch to English' : '切换到中文'}
-            aria-label={language === 'zh' ? 'Switch to English' : '切换到中文'}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 transition-colors shadow-2xs focus-visible:ring-2 focus-visible:ring-neutral-900"
+            title={language === 'zh' ? '切换为 English' : '切换为 中文'}
+            aria-label={language === 'zh' ? '切换为 English' : '切换为 中文'}
           >
             <Languages className="w-3.5 h-3.5 text-neutral-500" />
-            <span className="font-mono text-[11px] font-semibold">{language === 'zh' ? '中文' : 'EN'}</span>
+            <span className="font-mono text-[11px] font-semibold">{language === 'zh' ? '中 / EN' : 'EN / 中'}</span>
           </button>
 
           {/* Font Size Selector */}

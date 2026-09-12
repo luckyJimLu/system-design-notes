@@ -4,8 +4,10 @@ import tailwindcss from '@tailwindcss/vite';
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Use relative base in production for GitHub Pages / static export compatibility, and '/' in dev mode
-  base: process.env.NODE_ENV === 'production' ? './' : '/',
+  // Auto-detect GitHub Pages repository base in CI, fallback to relative for static hosting or '/' in dev
+  base: process.env.GITHUB_REPOSITORY
+    ? `/${process.env.GITHUB_REPOSITORY.split('/')[1]}/`
+    : (process.env.NODE_ENV === 'production' ? './' : '/'),
   plugins: [
     react(),
     tailwindcss(),

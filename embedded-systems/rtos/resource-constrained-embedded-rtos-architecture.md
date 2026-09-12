@@ -166,12 +166,12 @@ Task B: lock Device -> lock Bus
 
 推荐模型：
 
-```text
-IRQ
-  -> 快速采样/搬运
-  -> Ring Buffer / Task Notification
-  -> Worker / State Machine
-  -> 业务处理
+```mermaid
+flowchart LR
+    irq([硬件中断 IRQ]) --> topHalf["顶半部 ISR\n(快速采样/清除中断标志)"]
+    topHalf --> ipc{"轻量 IPC 解耦\n(Ring Buffer / Task Notification)"}
+    ipc --> bottomHalf["底半部 Worker Task / 状态机\n(完整报文解析 / 状态转移)"]
+    bottomHalf --> biz([业务逻辑处理与完成])
 ```
 
 ### 4.2 临界区长度决定中断响应下限
@@ -224,11 +224,19 @@ Idle Task -> Feed Watchdog
 
 典型 Tickless 流程：
 
-```text
-计算最近唤醒时间
-    -> 配置低功耗定时器
-    -> 关闭 Tick
-    -> WFI
+```mermaid
+flowchart TD
+    start([系统进入空闲 Idle 任务]) --> calc["计算下一次任务唤醒时间\n(Next Wakeup Tick)"]
+    calc --> checkMin{"剩余睡眠时间\n> 最小阈值?"}
+    checkMin -->|否| normalIdle["执行常规低开销 WFI\n维持系统 Tick"]
+    checkMin -->|是| cfgTimer["配置低功耗硬件定时器 (LPTIM)"]
+    cfgTimer --> stopTick["停止/屏蔽标准 SysTick"]
+    stopTick --> raceCheck{"原子确认: 是否有新中断/任务\n在准备期间就绪 (Race Check)?"}
+    raceCheck -->|有新任务就绪| abortSleep["中止睡眠 (Sleep Abort)\n立即恢复 SysTick 调度"]
+    raceCheck -->|安全无就绪| enterWFI["执行 WFI / WFE 进入低功耗模式"]
+    enterWFI --> wakeup([中断唤醒])
+    wakeup --> compTime["根据 LPTIM 计数补偿系统 Tick"]
+    compTime --> resumeOS["恢复标准调度器与外设时钟"]
 ```
 
 在“计算完成”和真正执行 `WFI` 之间若发生异步事件，并使高优先级任务就绪，就需要确保内核不会错误进入深睡眠。
@@ -248,16 +256,12 @@ Idle Task -> Feed Watchdog
 
 推荐分层：
 
-```text
-Application
-   ↓
-Domain / Service
-   ↓
-Driver Interface
-   ↓
-HAL / BSP
-   ↓
-MMIO / Hardware
+```mermaid
+flowchart TD
+    app["Application (应用层)"] -->|"高层业务逻辑"| domain["Domain / Service (领域服务层)"]
+    domain -->|"抽象设备契约"| drv["Driver Interface (驱动接口层)"]
+    drv -->|"零开销内联 / 编译期配置"| hal["HAL / BSP (硬件抽象与板级支持)"]
+    hal -->|"直读直写"| mmio["MMIO / Hardware Registers (物理寄存器)"]
 ```
 
 对极限资源 MCU，应尽量避免深层运行时动态派发。可以采用：
@@ -272,25 +276,21 @@ MMIO / Hardware
 
 ### 6.2 活动对象（Active Object）+ 层次化状态机（HSM）
 
-传统模式：
+架构对比：
 
-```text
-功能 A -> Task A + Stack A
-功能 B -> Task B + Stack B
-功能 C -> Task C + Stack C
-...
-```
+```mermaid
+flowchart TD
+    subgraph TRAD["传统模式 (RAM 浪费严重)"]
+        m1["模块 A"] --> tA["Task A + 私有栈 A"]
+        m2["模块 B"] --> tB["Task B + 私有栈 B"]
+        m3["模块 C"] --> tC["Task C + 私有栈 C"]
+    end
 
-更轻量的模式：
-
-```text
-Event Queue
-   ↓
-Active Object Task
-   ↓
-Hierarchical State Machine
-   ↓
-Run-to-Completion
+    subgraph AO["活动对象模式 (SRAM 极致节省)"]
+        events["统一 Event Queue"] --> aoTask["单一 Active Object Task (共享单一栈)"]
+        aoTask --> hsm["层次化状态机 (HSM)"]
+        hsm --> rtc["Run-to-Completion 快速分发"]
+    end
 ```
 
 核心原则：
@@ -338,12 +338,11 @@ next = (index + 1U) & (SIZE - 1U);
 
 关键原则是：
 
-```text
-先写数据
-   ↓
-Memory Barrier
-   ↓
-再发布 head
+```mermaid
+flowchart TD
+    wData["1. 先写入数据至 ring_buffer->data[head]"] --> dmb["2. 插入硬件内存屏障 (__DMB / 编译器屏障)"]
+    dmb --> pubHead["3. 更新发布写指针: ring_buffer->head = next"]
+    pubHead --> notify["4. 通知或唤醒消费者读取"]
 ```
 
 在 ARM CMSIS 环境可以根据目标架构和共享对象语义使用适当的内存屏障（例如 `__DMB()`），避免消费者先观察到索引更新、却尚未看到对应数据。
@@ -543,20 +542,23 @@ gcc -fstack-usage ...
 
 ### 12.1 架构
 
-```text
-Task A ---- set BIT0 ----┐
-Task B ---- set BIT1 ----┤
-Task C ---- set BIT2 ----┤
-                         ↓
-              Watchdog Supervisor
-                         ↓
-             All bits healthy ?
-                 /           \
-              yes             no
-               ↓               ↓
-           Feed HW WDG      Do not feed
-               ↓               ↓
-          Clear bitmap       HW Reset
+```mermaid
+flowchart TD
+    subgraph TASKS["业务任务心跳 (独立 Bit 位)"]
+        tA["Task A (业务闭环)"] -->|"原子置位 BIT0"| reg[("心跳位图寄存器")]
+        tB["Task B (协议处理)"] -->|"原子置位 BIT1"| reg
+        tC["Task C (传感器采样)"] -->|"原子置位 BIT2"| reg
+    end
+
+    reg --> supervisor["Watchdog Supervisor 检查任务"]
+    supervisor --> check{"所有关键业务位\n均已打卡 (WaitAll)?"}
+
+    check -->|"是 (全部健康)"| feed["刷新物理看门狗 (Feed WDG)"]
+    feed --> clear["原子清零所有心跳位图"] --> nextPeriod["进入下一监管周期"]
+
+    check -->|"否 (存在死锁/饿死)"| refuse["拒绝喂狗 (Do Not Feed)"]
+    refuse --> faultSave["保存最小崩溃上下文至 Backup RAM"]
+    faultSave --> hwReset(["硬件看门狗超时 -> 强制芯片复位"])
 ```
 
 ### 12.2 原则
@@ -627,34 +629,32 @@ Task C ---- set BIT2 ----┤
 
 ## 14. 推荐的系统级轻量架构
 
-```text
-+--------------------------------------------------+
-|                  Application                     |
-|  HSM / Active Objects / Domain State Machines    |
-+------------------------+-------------------------+
-                         |
-                         v
-+--------------------------------------------------+
-|                 Event / Service Layer            |
-| Task Notification | Event Queue | Timer Event    |
-+------------------------+-------------------------+
-                         |
-                         v
-+--------------------------------------------------+
-|              Few RTOS Worker Tasks               |
-|  Control | IO | Storage/Protocol | Supervisor    |
-+------------------------+-------------------------+
-                         |
-                         v
-+--------------------------------------------------+
-|              Driver / HAL / BSP                  |
-| UART | SPI | I2C | ADC | DMA | Flash | WDG       |
-+------------------------+-------------------------+
-                         |
-                         v
-+--------------------------------------------------+
-|                    Hardware                      |
-+--------------------------------------------------+
+```mermaid
+flowchart TD
+    subgraph L1["应用业务层 (Application)"]
+        app["HSM / Active Objects / 领域状态机\n(Run-to-Completion 无阻塞)"]
+    end
+
+    subgraph L2["事件与服务层 (Event / Service Layer)"]
+        events["Task Notification | Event Queue | 定时器事件"]
+    end
+
+    subgraph L3["RTOS 精简工作线程域 (Few RTOS Worker Tasks)"]
+        workers["Control Task | I/O Task | 协议存储 Task | Supervisor"]
+    end
+
+    subgraph L4["驱动与平台抽象 (Driver / HAL / BSP)"]
+        drivers["UART | SPI | I2C | ADC | DMA | Flash | WDG"]
+    end
+
+    subgraph L5["物理硬件层 (Hardware)"]
+        hw["MCU 外设寄存器 / 物理引脚 / 中断控制器"]
+    end
+
+    app -->|"分发业务事件"| events
+    events -->|"异步唤醒驱动"| workers
+    workers -->|"非阻塞/DMA 访问"| drivers
+    drivers -->|"直接寄存器 MMIO"| hw
 ```
 
 ### 推荐线程角色
@@ -730,14 +730,11 @@ Task C ---- set BIT2 ----┤
 
 优先级建议：
 
-```text
-Task Notification
-    ↓
-SPSC Ring Buffer
-    ↓
-Queue / Semaphore
-    ↓
-复杂共享锁结构
+```mermaid
+flowchart TD
+    p1["1. Task Notification (任务通知)\n(最轻量：零额外 RAM 控制块，直接利用 TCB)"] -->|需要数据缓冲队列| p2["2. SPSC Ring Buffer (无锁单产单消环)\n(仅需静态数组与 head/tail 索引，无阻塞开销)"]
+    p2 -->|需要多对多或等待阻塞| p3["3. OS Queue / Semaphore\n(包含等待链表与调度上下文切换，适度使用)"]
+    p3 -->|严禁滥用| p4["4. 复杂共享锁与互斥量\n(需强制优先级继承与锁顺序防死锁，优先级最低)"]
 ```
 
 前提是通信语义确实匹配，不能为了“轻量”而牺牲正确性。
@@ -772,31 +769,17 @@ Stack Analysis
 
 ## 17. 推荐验证流程
 
-```text
-1. 定义 MCU 资源预算
-       ↓
-2. 静态设计任务/缓冲/IPC
-       ↓
-3. 编译生成 ELF + MAP + SU
-       ↓
-4. 检查 Flash/RAM/Stack
-       ↓
-5. 测量 ISR / WCET / Latency
-       ↓
-6. 压力测试 + 峰值业务
-       ↓
-7. 故障注入
-   - Task hang
-   - Lock deadlock
-   - Ring overflow
-   - Stack pressure
-   - DMA burst
-       ↓
-8. 验证 Watchdog / Reset Recovery
-       ↓
-9. 低功耗与唤醒时序验证
-       ↓
-10. 量产配置冻结
+```mermaid
+flowchart TD
+    s1["1. 定义 MCU 资源预算\n(ROM/RAM/Stack/ISR Latency 限额)"] --> s2["2. 静态设计\n(任务规划 / 缓冲尺寸 / IPC 选型)"]
+    s2 --> s3["3. 编译分析\n(生成 ELF + .map + .su 静态调用图)"]
+    s3 --> s4["4. 静态审计\n(Flash/RAM 占用率与最差栈深度)"]
+    s4 --> s5["5. 实时性实测\n(GPIO/Trace 测量 ISR / WCET / 延迟)"]
+    s5 --> s6["6. 压力负载测试\n(峰值吞吐 / 持续满载稳定性验证)"]
+    s6 --> s7["7. 故障注入矩阵\n(Task Hang / 锁死 / 环溢出 / 栈打满 / 突发 DMA)"]
+    s7 --> s8["8. 验证自愈容灾\n(Watchdog 触发 & Backup RAM 崩溃现场保存)"]
+    s8 --> s9["9. 低功耗与时序\n(Tickless 唤醒时序 & 竞争窗口拦截)"]
+    s9 --> s10["10. 冻结量产配置\n(关闭调试开关，固化只读区与校验)"]
 ```
 
 ---

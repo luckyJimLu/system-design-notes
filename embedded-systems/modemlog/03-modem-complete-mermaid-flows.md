@@ -6,121 +6,234 @@
 
 ```mermaid
 flowchart TD
-    modemLog["Modem 日志服务"] --> logSocket["MCU ModemLog Socket"]
-    modemChr["Modem CHR服务"] --> chrSocket["MCU CHR Socket"]
-    logSocket --> reactor["Socket Reactor"]
-    chrSocket --> reactor
-    reactor --> logRing["ModemLog 专用块环"]
-    reactor --> chrRing["CHR 专用消息块环"]
-    net["正常 lwIP RX / TX"] --> tap["有界只读 Capture Tap"]
-    tap --> normal["原始业务路径继续"]
-    tap -.->|"尽力复制"| cap["私有 RX / TX 抓包环"]
-    logRing --> storage["唯一 Storage Owner"]
-    chrRing --> storage
-    cap --> storage
-    storage --> files["日志文件、CHR文件、PCAP文件"]
+    subgraph MODEM["Modem 固件域 (IPC 诊断源)"]
+        modemLog["Modem 日志流服务\n(持续高吞吐 1 Mbps)"]
+        modemChr["Modem CHR 事件服务\n(关键状态与崩溃信令)"]
+    end
+
+    subgraph INGRESS["MCU 接入调度域 (Socket Reactor Task)"]
+        logSock["ModemLog TCP 客户端\n(非阻塞套接字)"]
+        chrSock["CHR TCP 客户端\n(按序可靠套接字)"]
+        reactor["Socket Reactor 事件调度器\n(select 多路复用 / 动态配额)"]
+        logSock --> reactor
+        chrSock --> reactor
+    end
+
+    subgraph NETIF["lwIP 网络业务域 (MCU 正常业务流量)"]
+        netTraffic["正常 lwIP RX / TX 报文流"] --> tap{"CaptureTap\n旁路观察门"}
+        tap -->|"零延迟放行"| netStack["原始业务协议栈正常流转"]
+    end
+
+    subgraph SRAM_POOLS["静态内存池 (SPSC 无锁环形缓冲区)"]
+        logRing[("ModemLog 专用块环\n(定长 Chunk 队列)")]
+        chrRing[("CHR 专用消息环\n(边界保全队列)")]
+        capRing[("Capture 独立快照环\n(私有槽位双缓冲)")]
+    end
+
+    subgraph STORAGE_DOMAIN["存储引擎任务 (Storage Owner Task)"]
+        storageExec["唯一 Storage Owner 引擎\n(独占 FatFs / SDIO DMA 控制权)"]
+    end
+
+    subgraph MEDIA_FS["持久化介质 (SD卡 / eMMC)"]
+        fileLog[("ModemLog 文件\n(*.log 循环覆盖)")]
+        fileChr[("CHR 文件\n(*.chr 追加归档)")]
+        filePcap[("PCAP 文件\n(*.pcap 抓包存储)")]
+    end
+
+    modemLog -->|"IPC 诊断链路"| logSock
+    modemChr -->|"IPC 诊断链路"| chrSock
+
+    reactor -->|"零拷贝发布块"| logRing
+    reactor -->|"结构化分帧发布"| chrRing
+    tap -.->|"尽力复制 (若槽位可用)"| capRing
+
+    logRing -->|"按序批量消费"| storageExec
+    chrRing -->|"按序消费确认"| storageExec
+    capRing -->|"异步排空"| storageExec
+
+    storageExec --> fileLog
+    storageExec --> fileChr
+    storageExec --> filePcap
 ```
 
-## 2. Socket Reactor公平接收
+## 2. Socket Reactor 公平接收
 
 ```mermaid
 flowchart TD
-    control["处理控制与停止请求"] --> sets["按空闲配额重建 fd集合"]
-    sets --> wait["select 有限超时"]
-    wait --> chr["CHR 就绪则有限读取"]
-    chr --> log["ModemLog 就绪则有限读取"]
-    log --> parse["保存分帧状态并发布块"]
-    parse --> notify["通知 Storage"]
-    notify --> budget["检查CPU预算和停止状态"]
-    budget --> control
+    start([调度周期开始]) --> checkCtl{"处理控制与停机信号?"}
+    checkCtl -->|有挂起控制命令| handleCtl["更新会话状态机\n执行局部静默/排空"]
+    checkCtl -->|无挂起控制命令| buildFds["根据环空闲配额\n重构 fd_set 集合"]
+
+    handleCtl --> buildFds
+    buildFds --> doSelect["执行 select() (有限超时 5~10ms)"]
+
+    doSelect --> selResult{"select 返回结果?"}
+    selResult -->|超时 0 就绪| checkBudget
+    selResult -->|错误 EINTR| logErr["记录瞬态告警并退避"] --> checkBudget
+    selResult -->|事件就绪| checkChr{"CHR 就绪?"}
+
+    checkChr -->|是| readChr["限额读取 CHR 帧 (防饥饿)\n校验帧长与头部 CRC"]
+    checkChr -->|否| checkLog{"ModemLog 就绪?"}
+    readChr --> checkLog
+
+    checkLog -->|是| readLog["限额读取 Log 块 (防独占 CPU)\n写入预分配固定内存块"]
+    checkLog -->|否| checkPublish
+    readLog --> checkPublish
+
+    checkPublish{"是否有新数据块就绪?"}
+    checkPublish -->|是| publish["内存屏障发布至环形队列\n轻量信号量通知 Storage"]
+    checkPublish -->|否| checkBudget
+
+    publish --> checkBudget{"检查 CPU 时间片配额\n与停机终止标志?"}
+    checkBudget -->|未超额且未停机| buildFds
+    checkBudget -->|超额或需让渡| yield["taskYIELD() 让出时间片"] --> start
 ```
 
-## 3. Capture Tap失败放行流程
+## 3. Capture Tap 失败放行流程
 
 ```mermaid
 flowchart TD
-    packet["原包到达观察点"] --> enabled{"启用且在范围内？"}
-    enabled -->|"否"| pass["原路径继续"]
-    enabled -->|"是"| budget{"过滤及包率字节预算通过？"}
-    budget -->|"否"| pass
-    budget -->|"是"| slot{"立即取得私有槽？"}
-    slot -->|"否"| drop["仅增加抓包drop"]
-    slot -->|"是"| copy["限长限链段只读复制"]
-    copy --> valid{"快照完整？"}
-    valid -->|"否"| discard["归还未发布槽并记drop"]
-    valid -->|"是"| publish["release发布槽并通知Storage"]
-    drop --> pass
-    discard --> pass
-    publish --> pass
+    pktIn([原始报文到达网络观察点 lwIP Ingress / Egress]) --> checkEn{"1. 抓包功能是否启用\n且匹配网卡监听白名单?"}
+    checkEn -->|否| passOriginal["原路径继续：无延迟无损耗送入 lwIP"]
+    checkEn -->|是| checkBudget{"2. 过滤及包率字节预算检查\n(Token Bucket 速率限制)?"}
+
+    checkBudget -->|预算超限| dropCount1["仅递增预算 Drop 计数器"] --> passOriginal
+    checkBudget -->|预算合格| acquireSlot{"3. 尝试原子预约私有抓包槽位\n(非阻塞 Try-Acquire)?"}
+
+    acquireSlot -->|无可用空闲槽| dropCount2["仅递增溢出 Drop 计数器\n(不阻塞正常业务通信)"] --> passOriginal
+    acquireSlot -->|成功取得槽位| copyPkt["4. 限长只读复制 (SnapLen 截断)\n只读持有 pbuf，杜绝长周期引用"]
+
+    copyPkt --> checkValid{"5. 快照与分段校验完整?"}
+    checkValid -->|校验失败| discardSlot["归还槽位至 FREE 状态\n递增快照损坏 Drop 计数"] --> passOriginal
+    checkValid -->|校验合格| publishSlot["6. Release 标记槽位为 READY\n异步通知 StorageOwner 消费"] --> passOriginal
+
+    passOriginal --> pktOut([原始报文继续正常收发处理])
 ```
 
 ## 4. 槽位所有权状态
 
 ```mermaid
 stateDiagram-v2
-    [*] --> FREE
-    FREE --> FILLING: 唯一生产者预约
-    FILLING --> READY: release发布
-    FILLING --> FREE: 取消未发布快照
-    READY --> READING: Storage acquire取得
-    READING --> FREE: 同步消费完成或复制至Storage私有区
-    READING --> ERROR_HELD: IO失败且所有权尚未解除
-    ERROR_HELD --> FREE: 确认DMA停止后显式清理
+    [*] --> FREE: 系统冷启动静态内存分配
+
+    state "FREE (空闲可用)" as FREE
+    state "FILLING (生产者占用写入)" as FILLING
+    state "READY (已就绪等待消费)" as READY
+    state "READING (Storage 独占读取)" as READING
+    state "ERROR_HELD (故障保持与隔离)" as ERROR_HELD
+
+    FREE --> FILLING: 唯一生产者原子预约成功\n[Producer Try-Acquire]
+    FILLING --> READY: 写入校验完成并发布\n[Release Publish]
+    FILLING --> FREE: 校验异常 / 取消未发布快照\n[Rollback Discard]
+
+    READY --> READING: Storage 引擎原子取得读取所有权\n[Storage Acquire]
+    READING --> FREE: DMA 写盘同步结束直接释放\n[Storage Release]
+    READING --> ERROR_HELD: SDIO/DMA 传输错误，保留故障现场\n[IO Failure]
+
+    ERROR_HELD --> FREE: 确认 DMA 停止后显式清理复位\n[Fault Recovery Clean]
 ```
 
 ## 5. 公网与核间路由边界
 
 ```mermaid
 flowchart TD
-    diag["两个诊断 Socket"] --> ipc["IPC 地址域"]
-    app["公网应用 Socket"] --> wan["WAN 默认接口"]
-    ipc --> guardI["IPC 出口地址与链路校验"]
-    wan --> guardW["WAN 出口拒绝 IPC 源和目的"]
-    guardI --> local["Modem 本地诊断端点"]
-    guardW --> modemWan["Modem 公网透传或路由"]
-    modemWan --> cell["蜂窝网络"]
-    wan -.->|"只读快照"| capture["MCU 本地 TCPDump"]
+    subgraph APPS["应用层套接字发起来源"]
+        diagSockets["诊断通信客户端\n(两个专用诊断 Socket)"]
+        wanApps["公网业务应用\n(HTTP / MQTT / OTA Socket)"]
+    end
+
+    subgraph ROUTING["MCU 路由裁决与合规引擎"]
+        routeTable{"根据目的 IP 查路由表"}
+        guardIPC{"IPC 边界校验规则\n仅放行 Modem 本地诊断地址"}
+        guardWAN{"WAN 边界校验规则\n严禁泄漏任何 IPC 内部私网地址"}
+    end
+
+    subgraph NETIFS["网络物理/虚拟接口"]
+        netifIPC["IPC 虚拟网卡接口\n(核间专属通信)"]
+        netifWAN["WAN 默认网卡接口\n(4G 蜂窝公网通信)"]
+        tap["MCU 本地 Capture Tap\n(只读旁路镜像探针)"]
+    end
+
+    subgraph EXTERNALS["外部网络实体"]
+        modemLocal["Modem 本地诊断端点\n(127.0.0.1 / 本地控制口)"]
+        modemCell["蜂窝运营商公网\n(Cellular Internet)"]
+    end
+
+    diagSockets -->|"指定绑定 IPC IP"| routeTable
+    wanApps -->|"默认走缺省网关"| routeTable
+
+    routeTable -->|"目标为 IPC 内部网"| guardIPC
+    routeTable -->|"目标为外部公网"| guardWAN
+
+    guardIPC -->|"地址合法"| netifIPC
+    guardIPC -->|"越界外发"| dropIPC["丢弃并安全审计告警"]
+
+    guardWAN -->|"地址合法"| netifWAN
+    guardWAN -->|"私网泄漏"| dropWAN["丢弃阻断内部数据泄漏"]
+
+    netifIPC --> modemLocal
+    netifWAN --> modemCell
+    netifWAN -.->|"只读快照"| tap
 ```
 
 ## 6. 指定业务安全停止
 
 ```mermaid
 sequenceDiagram
-    participant manager as 会话管理
-    participant producer as Reactor或Capture入口
-    participant storage as Storage Owner
-    participant disk as SD驱动
-    manager->>producer: 停止指定业务输入
-    producer->>producer: 禁止新进入并等待在途完成
-    producer-->>manager: 输入已静默
-    manager->>storage: 排空该业务并关闭文件
-    storage->>disk: 完成写入和同步
-    disk-->>storage: 成功或有界故障
-    storage-->>manager: 结果与资源清理确认
-    manager->>manager: 标记STOPPED或FAULTED
+    autonumber
+    actor Manager as 会话管理 (SessionCoordinator)
+    participant Producer as Reactor或Capture入口
+    participant Storage as Storage Owner
+    participant Disk as SD驱动 / FatFs
+
+    Note over Manager,Disk: 阶段 1: 停止输入准入
+    Manager->>Producer: 请求停止指定业务输入 (STOP_REQUEST)
+    Producer->>Producer: 禁止新报文进入，标记 QUIESCING
+    Producer->>Producer: 等待在途当前分块完成发布
+    Producer-->>Manager: 输入已完全静默 (Ingress Quiesced)
+
+    Note over Manager,Disk: 阶段 2: 排空在途缓冲并关停文件
+    Manager->>Storage: 通知排空该业务并关闭文件 (DRAIN_AND_CLOSE)
+    Storage->>Storage: 顺序消费该业务所有剩余已发布块
+    Storage->>Disk: 完成最后缓冲区写入并调用 f_sync()
+    Disk-->>Storage: 写入成功确认 (或有界超时故障)
+    Storage->>Disk: f_close() 关闭对应文件句柄
+    Storage-->>Manager: 资源释放与清理确认
+
+    Note over Manager: 状态安全更新
+    Manager->>Manager: 标记会话为 STOPPED (或 FAULTED)
 ```
 
 ## 7. RX与TX正常报文和抓包副本时序
 
 ```mermaid
 sequenceDiagram
-    participant driver as 正常驱动
-    participant tap as Capture Tap
-    participant pool as 私有抓包槽
-    participant network as lwIP正常路径
-    participant storage as Storage Owner
-    driver->>tap: 原包仍由正常路径持有
-    tap->>pool: 尝试预约并限长复制
-    alt 私有槽可用且预算通过
-        pool-->>tap: 快照已发布
-        tap-->>driver: 返回
-        driver->>network: 继续原始包处理
-        storage->>pool: 异步读取副本
-        storage->>storage: 序列化和写盘
-        storage->>pool: 消费结束归还槽
-    else 抓包无法完成
-        tap-->>driver: 只记drop并返回
-        driver->>network: 继续原始包处理
+    autonumber
+    participant Driver as 网络驱动 (RX/TX)
+    participant Tap as Capture Tap
+    participant Pool as 私有抓包槽池
+    participant Network as lwIP 正常网络路径
+    participant Storage as Storage Owner
+
+    Note over Driver,Network: 快速路径：非侵入式只读观察
+    Driver->>Tap: 原包传入 (由正常网络栈持有所有权)
+    Tap->>Tap: 检查抓包白名单及 Token Bucket 预算
+
+    alt 私有槽可用且预算通过 (快速复制)
+        Tap->>Pool: 尝试原子预约私有槽 (Try-Reserve)
+        Tap->>Pool: 限长 SnapLen 只读拷贝前 N 字节
+        Pool-->>Tap: 快照完成并发布为 READY
+        Tap-->>Driver: 立即返回 (纳秒级耗时)
+        Driver->>Network: 继续执行原始报文正常转发收发
+
+        Note over Storage,Pool: 异步解耦写盘路径
+        Storage->>Pool: 异步检测并提取 READY 槽位
+        Storage->>Storage: 组装 PCAP 数据头并写入磁盘缓冲
+        Storage->>Pool: 消费结束，释放槽位变回 FREE
+    else 槽位耗尽或超过预算 (主动丢弃降级)
+        Tap->>Tap: 递增对应 Drop 计数器
+        Tap-->>Driver: 立即返回 (零开销)
+        Driver->>Network: 继续执行原始报文正常转发收发 (业务零影响)
     end
 ```
 
@@ -128,31 +241,63 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    slow["Storage变慢或故障"] --> cap["减少或停止抓包admission"]
-    cap --> log["ModemLog独立高水位流控"]
-    log --> chr["CHR按可靠性协议处理"]
-    chr --> failed{"存储超过故障截止时间？"}
-    failed -->|"否"| recover["按低水位及冷却条件恢复"]
-    failed -->|"是"| fault["诊断文件FAULTED并安全清理"]
-    fault --> keep["正常WAN继续运行"]
-    recover --> keep
+    start([检测到 SDIO 变慢或环形缓冲积压达到高水位]) --> tier1
+
+    subgraph T1["第一级退让：削减非关键旁路"]
+        tier1["1. 立即停止或缩减 CaptureTap 准入\n(降级为 100% 旁路丢弃，业务完全不受损)"]
+        tier1 --> checkT1{"积压是否缓解?"}
+        checkT1 -->|是| recoverT1["恢复 Capture 抓包采样"] --> normalState([恢复常态运行])
+        checkT1 -->|否| tier2
+    end
+
+    subgraph T2["第二级退让：流控高吞吐日志"]
+        tier2["2. ModemLog 独立高水位流控\n(收缩 TCP 接收窗口，依靠协议栈自然背压)"]
+        tier2 --> checkT2{"积压是否缓解?"}
+        checkT2 -->|是| recoverT2["缓慢恢复正常接收窗口"] --> normalState
+        checkT2 -->|否| tier3
+    end
+
+    subgraph T3["第三级退让：信令可靠性保护"]
+        tier3["3. CHR 维持高优先级排队\n(仅在超限时按可靠性协议拒绝低优事件)"]
+        tier3 --> checkTimeout{"存储写入停滞\n是否超过故障截止时间?"}
+        checkTimeout -->|否| waitRecovery["按低水位及冷却条件等待恢复"] --> tier2
+        checkTimeout -->|是| tier4
+    end
+
+    subgraph T4["第四级退让：故障隔离熔断"]
+        tier4["4. 诊断文件标记为 FAULTED\n安全中止 DMA 传输并关闭诊断文件"]
+        tier4 --> keepWAN["正常 WAN 蜂窝业务继续 100% 运行不受拖累"]
+        tier4 --> alertOps["上报存储硬件故障遥测日志"]
+    end
 ```
 
 ## 9. 会话状态而非线程生命周期
 
 ```mermaid
 stateDiagram-v2
-    [*] --> STOPPED
-    STOPPED --> PREPARING: Storage准备资源和文件
-    PREPARING --> ACTIVE: 输入admission开启
-    PREPARING --> FAULTED: 初始化失败
-    ACTIVE --> QUIESCING: 指定业务停止
-    QUIESCING --> DRAINING: 输入静默且inflight归零
-    DRAINING --> STOPPED: 排空和关闭成功
-    ACTIVE --> FAULTED: IO或通道失败
-    QUIESCING --> FAULTED: 停止超时
-    DRAINING --> FAULTED: 同步失败
-    FAULTED --> STOPPED: 安全隔离与清理完成
+    [*] --> STOPPED: 系统冷启动就绪
+
+    state "STOPPED (就绪静默)" as STOPPED
+    state "PREPARING (资源分配与文件就绪)" as PREPARING
+    state "ACTIVE (全速采集与存储中)" as ACTIVE
+    state "QUIESCING (输入源静默中)" as QUIESCING
+    state "DRAINING (排空在途队列)" as DRAINING
+    state "FAULTED (故障隔离与保护)" as FAULTED
+
+    STOPPED --> PREPARING: 收到启动命令 (Start Command)\n[Storage 准备内存与新建文件]
+    PREPARING --> ACTIVE: 文件初始化成功\n[打开 Socket 读准入]
+    PREPARING --> FAULTED: 文件创建失败或存储介质不可用\n[记录初始化错误]
+
+    ACTIVE --> QUIESCING: 收到停止命令 (Stop Command)\n[关闭输入端准入]
+    ACTIVE --> FAULTED: 底层 IO 致命错误或通道失败\n[触发保护熔断]
+
+    QUIESCING --> DRAINING: 输入完全静默且 inflight 归零\n[无新数据入队]
+    QUIESCING --> FAULTED: 等待静默超时\n[强制关停]
+
+    DRAINING --> STOPPED: 排空完成且文件安全关闭同步\n[f_close 成功]
+    DRAINING --> FAULTED: 排空同步超时或写入错误\n[记录未落盘日志]
+
+    FAULTED --> STOPPED: 运维执行安全隔离与资源清理完成\n[显式重置清理]
 ```
 
 ## 关键阅读约束
@@ -167,20 +312,48 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
-    api["DiagnosticApi"] -->|"固定请求槽"| coordinator["SessionCoordinator"]
-    subgraph reactorTask["SocketReactor 任务"]
-        coordinator --> reactor["SocketReactor"]
-        reactor --> log["LogSession"]
-        reactor --> chr["ChrSession"]
+    subgraph CLIENT["应用与控制接口 (Caller Context)"]
+        api["DiagnosticApi\n(提供统一外部调用契约)"]
+        requestSlot[("固定请求槽\n(Fixed Command Slot)")]
+        api -->|"零堆分配提交"| requestSlot
     end
-    log --> rings["Log 与 CHR 专用环"]
-    chr --> rings
-    hooks["已有 lwIP RX / TX 上下文"] --> tap["CaptureTap 与 CaptureGate"]
-    tap --> cap["独立 RX / TX 快照环"]
-    coordinator -->|"存储命令槽"| storage["StorageOwner 任务"]
-    rings --> storage
-    cap --> storage
-    storage --> files["FatFsPort 与三个文件会话"]
+
+    subgraph REACTOR_TASK["SocketReactor 调度任务 (Task 1)"]
+        coordinator["SessionCoordinator\n(统一会话协调器)"]
+        requestSlot --> coordinator
+        
+        reactor["SocketReactor\n(select 多路复用)"]
+        coordinator --> reactor
+
+        log["LogSession\n(无锁字节块解包)"]
+        chr["ChrSession\n(事务分帧与持久化确认)"]
+
+        reactor --> log
+        reactor --> chr
+    end
+
+    subgraph BUFFERS["SRAM 专用静态缓冲区 (SPSC Rings)"]
+        rings[("Log 与 CHR 专用块环\n(定长 Chunk 队列)")]
+        cap[("独立 RX / TX 快照环\n(双缓冲槽位池)")]
+
+        log -->|"发布所有权"| rings
+        chr -->|"发布所有权"| rings
+    end
+
+    subgraph LWIP_CTX["lwIP 协议栈上下文 (Network Thread / ISR)"]
+        hooks["已有 lwIP RX / TX 钩子"] --> tap["CaptureTap 与 CaptureGate\n(原子计数 / 阈值过滤)"]
+        tap -.->|"Try-Reserve 复制"| cap
+    end
+
+    subgraph STORAGE_TASK["StorageOwner 存储任务 (Task 2)"]
+        coordinator -->|"存储命令槽"| storage["StorageOwner 任务\n(单线程串行处理)"]
+        rings -->|"消费读取"| storage
+        cap -->|"消费读取"| storage
+
+        files["FatFsPort 驱动抽象\n(扇区对齐写入)"]
+        storage --> files
+    end
+
     storage -.->|"保留至确认的结果槽"| coordinator
 ```
 
@@ -188,19 +361,24 @@ flowchart TD
 
 ```mermaid
 sequenceDiagram
-    participant app as 应用
-    participant ctl as Coordinator及Reactor
-    participant disk as StorageOwner
-    participant source as Socket会话或CaptureGate
-    app->>ctl: 提交 Start 请求
-    ctl->>disk: PrepareFile 与 generation
-    disk-->>ctl: 保留完成结果
+    autonumber
+    actor App as 业务应用 (App)
+    participant Ctl as Coordinator 及 Reactor
+    participant Disk as StorageOwner 任务
+    participant Source as Socket会话或CaptureGate
+
+    App->>Ctl: 提交 Start 异步请求
+    Note over Ctl,Disk: 存储准备先于数据接入
+    Ctl->>Disk: PrepareFile 与 generation 参数
+    Disk->>Disk: 创建/对齐目标日志文件
+    Disk-->>Ctl: 保留完成结果 (Prepared OK / Error)
+
     alt 文件准备成功
-        ctl->>source: 非阻塞连接或启用快照
-        source-->>ctl: READY 或连接完成
-        ctl-->>app: 请求完成为 RUNNING
+        Ctl->>Source: 非阻塞连接建立或启用快照门控
+        Source-->>Ctl: READY 或连接建立完成
+        Ctl-->>App: 异步通知：请求完成为 RUNNING
     else 文件准备失败
-        ctl-->>app: 请求完成为 FAULTED
+        Ctl-->>App: 异步通知：请求失败，状态标记为 FAULTED
     end
 ```
 
@@ -208,14 +386,20 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant modem as Modem CHR
-    participant rx as ChrSession及Reactor
-    participant ring as CHR专用环
-    participant disk as StorageOwner
-    modem->>rx: 有序消息字节流
-    rx->>ring: 完整记录或有界分段发布
-    ring->>disk: 按序消费
-    disk->>disk: 写入并按策略同步
-    disk-->>rx: 同步检查点与 generation
-    rx-->>modem: 协议允许时发送持久化 ACK
+    autonumber
+    participant Modem as Modem CHR 固件
+    participant Rx as ChrSession 及 Reactor
+    participant Ring as CHR 专用无锁环
+    participant Disk as StorageOwner 任务
+
+    Modem->>Rx: 有序消息字节流 (带消息唯一标识 SeqID)
+    Rx->>Rx: 帧边界校验与完整性确认
+    Rx->>Ring: 完整记录或有界分段发布至环形队列
+    Rx-->>Modem: TCP 传输层 ACK (网络层已收妥)
+
+    Note over Ring,Disk: 异步写盘与落盘确认
+    Disk->>Ring: 按序消费待写入 CHR 块
+    Disk->>Disk: 写入 FatFs 并在边界调用 f_sync()
+    Disk-->>Rx: 同步检查点确认 (已完成持久化至 generation/SeqID)
+    Rx-->>Modem: 协议允许时发送应用级持久化 ACK\n(Modem 端可安全回收内部诊断缓存)
 ```

@@ -152,7 +152,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       onThisPage: 'On this page'
     },
     searchModal: {
-      inputPlaceholder: "Search all 36 chapters, topics, tags (e.g. 'rate limiter', 'RTOS', 'ring buffer')...",
+      inputPlaceholder: "Search all 37 chapters, topics, tags (e.g. 'rate limiter', 'RTOS', 'ring buffer', 'lwIP')...",
       noResults: 'No matching chapters or architecture concepts found for',
       navigateTip: 'Navigate',
       selectTip: 'Select',
@@ -253,7 +253,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       onThisPage: '本章大纲目录'
     },
     searchModal: {
-      inputPlaceholder: "搜索全部 36 个章节、架构概念、技术标签 (如 '限流器', 'RTOS', '环形缓冲', '双网卡')...",
+      inputPlaceholder: "搜索全部 37 个章节、架构概念、技术标签 (如 '限流器', 'RTOS', '环形缓冲', '双网卡', 'lwIP')...",
       noResults: '未找到相关章节或架构概念：',
       navigateTip: '上下移动',
       selectTip: '回车进入',

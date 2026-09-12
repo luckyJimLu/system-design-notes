@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
 import {
-  Search,
   CheckCircle2,
   Bookmark,
   Layers,
@@ -19,7 +18,6 @@ interface SidebarProps {
   completed: Set<string>;
   onToggleBookmark: (id: string) => void;
   onToggleCompleted: (id: string) => void;
-  onOpenSearch: () => void;
   onOpenCheatSheet: () => void;
   onOpenResources: () => void;
   isCurrentViewResources: boolean;
@@ -36,7 +34,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   completed,
   onToggleBookmark,
   onToggleCompleted,
-  onOpenSearch,
   onOpenCheatSheet,
   onOpenResources,
   isCurrentViewResources,
@@ -102,27 +99,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             aria-label="Close navigation menu"
           >
             <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Global Search Trigger */}
-        <div className="p-3 border-b border-neutral-100 bg-neutral-50/50">
-          <button
-            id="sidebar-search-btn"
-            type="button"
-            onClick={() => {
-              onOpenSearch();
-              if (isOpenMobile) onCloseMobile();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 text-xs text-neutral-500 bg-white hover:bg-neutral-50 rounded-lg border border-neutral-200 transition-colors group text-left shadow-2xs focus-visible:ring-2 focus-visible:ring-neutral-900"
-          >
-            <span className="flex items-center gap-2">
-              <Search className="w-3.5 h-3.5 text-neutral-400 group-hover:text-neutral-700 transition-colors" />
-              <span className="text-neutral-600">{t.searchPlaceholder}</span>
-            </span>
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-neutral-400 bg-neutral-100 rounded border border-neutral-200">
-              ⌘K
-            </kbd>
           </button>
         </div>
 
@@ -247,11 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           : 'bg-neutral-100 text-neutral-600 group-hover:bg-neutral-200'
                       }`}
                     >
-                      {ch.volume === 0
-                        ? (ch.folderName.includes('modemlog')
-                            ? (ch.fileName.match(/^(\d{2})-/)?.[1] || 'EM')
-                            : ch.id.includes('rtos') ? 'RT' : 'EM')
-                        : ch.number}
+                      {ch.number}
                     </span>
 
                     <span className="truncate leading-normal">

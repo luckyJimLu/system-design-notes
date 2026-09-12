@@ -638,6 +638,17 @@ export const embeddedMeta: Record<string, EmbeddedDocMeta> = {
     tagsEn: ['UART Driver', 'Ring Buffer', 'Lock-Free', 'DMA'],
     tagsZh: ['串口驱动', '环形缓冲', 'RingBuffer', '无锁队列', 'DMA'],
     order: 26
+  },
+  lwip_tcpip_deepwiki: {
+    titleEn: 'lwIP TCP/IP Stack Architecture, Memory, netif, API & RTOS Porting',
+    titleZh: 'lwIP TCP/IP 协议栈：架构、内存、netif、API 与 RTOS 移植',
+    descEn:
+      'In-depth study on lwIP lightweight TCP/IP stack: NO_SYS=1 bare-metal vs NO_SYS=0 RTOS thread models, tcpip_thread core serialization, pbuf/mem/memp memory subsystem, struct netif boundaries, and debugging techniques.',
+    descZh:
+      '深入剖析 lwIP 轻量级 TCP/IP 协议栈：NO_SYS=1 裸机与 NO_SYS=0 RTOS 线程模型、tcpip_thread 核心串行化上下文、pbuf/mem/memp 内存管理体系、struct netif 驱动边界与双网卡路由容灾。',
+    tagsEn: ['lwIP', 'TCP/IP', 'RTOS', 'Ethernet', 'PPPoS', 'netif', 'pbuf'],
+    tagsZh: ['lwIP协议栈', 'TCP/IP', 'RTOS移植', '以太网', 'PPPoS', 'netif', 'pbuf内存池'],
+    order: 9
   }
 };
 
@@ -761,7 +772,8 @@ export function getChapters(): Chapter[] {
     return a.stableFileName.localeCompare(b.stableFileName);
   });
 
-  let embeddedIndex = 101;
+  // Start numbering newly added embedded & systems architecture documents continuously from 29
+  let embeddedIndex = 29;
 
   for (const group of sortedGroups) {
     // Embedded documents: original is Chinese, so defaultKey is Chinese

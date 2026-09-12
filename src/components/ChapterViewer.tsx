@@ -6,6 +6,7 @@ import { Chapter, Language } from '../types';
 import { resolveImageUrl } from '../content/catalog';
 import { CalloutBlock } from '../renderers/CalloutBlock';
 import { I18N_STRINGS } from '../data/i18n';
+import { MermaidDiagram } from './MermaidDiagram';
 import {
   Bookmark,
   CheckCircle2,
@@ -17,7 +18,6 @@ import {
   ArrowRight,
   Sparkles,
   ExternalLink,
-  Languages,
 } from 'lucide-react';
 
 interface ChapterViewerProps {
@@ -31,7 +31,6 @@ interface ChapterViewerProps {
   allChapters: Chapter[];
   fontSize: 'sm' | 'base' | 'lg';
   language: Language;
-  onToggleLanguage?: () => void;
 }
 
 export const ChapterViewer: React.FC<ChapterViewerProps> = ({
@@ -45,7 +44,6 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
   allChapters,
   fontSize,
   language,
-  onToggleLanguage
 }) => {
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const t = I18N_STRINGS[language];
@@ -57,8 +55,6 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
     }
     return chapter.markdownEn || chapter.markdown;
   }, [chapter, language]);
-
-  const hasBilingual = Boolean(chapter.markdownZh && chapter.markdownEn);
 
   // Dynamic reading time estimate
   const estimatedReadMinutes = useMemo(() => {
@@ -167,64 +163,13 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
           </div>
         </div>
 
-        {/* Bilingual Quick-Switch Bar */}
-        <div className="mb-4 flex items-center justify-between gap-2 p-2 px-3 rounded-lg bg-neutral-50 border border-neutral-200 text-xs text-neutral-600">
-          <div className="flex items-center gap-2">
-            <Languages className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-            <span className="font-medium text-neutral-700">
-              {language === 'zh' ? '文档语言' : 'Document Language'}:
-            </span>
-            <div className="inline-flex rounded-md bg-neutral-200/70 p-0.5" role="group" aria-label="Document language selector">
-              <button
-                type="button"
-                id="doc-lang-zh"
-                onClick={() => {
-                  if (language !== 'zh' && onToggleLanguage) onToggleLanguage();
-                }}
-                className={`px-2 py-0.5 text-xs rounded transition-all font-medium ${
-                  language === 'zh'
-                    ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-                aria-pressed={language === 'zh'}
-              >
-                中文
-              </button>
-              <button
-                type="button"
-                id="doc-lang-en"
-                onClick={() => {
-                  if (language !== 'en' && onToggleLanguage) onToggleLanguage();
-                }}
-                className={`px-2 py-0.5 text-xs rounded transition-all font-medium ${
-                  language === 'en'
-                    ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-                aria-pressed={language === 'en'}
-              >
-                English
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-            {hasBilingual ? (
-              <span className="inline-flex items-center gap-1.5 text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                {language === 'zh' ? '中英双语就绪' : 'Bilingual Ready'}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
         {/* Main Title */}
         <h1 className="text-2xl sm:text-3xl lg:text-3.5xl font-bold text-neutral-900 tracking-tight leading-tight">
-          {chapter.volume !== 0 && (
-            <span className="text-neutral-500 block text-xs font-mono font-semibold uppercase tracking-wider mb-1">
-              {language === 'zh' ? `第 ${chapter.number} 章` : `Chapter ${chapter.number}`}
-            </span>
-          )}
+          <span className="text-neutral-500 block text-xs font-mono font-semibold uppercase tracking-wider mb-1">
+            {language === 'zh'
+              ? (chapter.volume === 0 ? `第 ${chapter.number} 章 · 嵌入式与系统通信` : `第 ${chapter.number} 章`)
+              : (chapter.volume === 0 ? `Chapter ${chapter.number} · Embedded Systems` : `Chapter ${chapter.number}`)}
+          </span>
           {currentTitle}
         </h1>
 
@@ -395,7 +340,11 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
 
               if (isBlock) {
                 const codeId = `code-${Math.random().toString(36).slice(2, 7)}`;
-                const lang = match ? match[1] : 'text';
+                const lang = match ? match[1].toLowerCase() : 'text';
+
+                if (lang === 'mermaid') {
+                  return <MermaidDiagram code={codeString} language={language} />;
+                }
 
                 if (lang === 'callout') {
                   const attributes: Record<string, string> = {};
@@ -509,7 +458,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               {t.chapter.prevChapter}
             </span>
             <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-blue-700 transition-colors">
-              {prevChapter.volume !== 0 ? (language === 'zh' ? `第${prevChapter.number}章: ` : `Ch ${prevChapter.number}: `) : ''}
+              {language === 'zh' ? `第${prevChapter.number}章: ` : `Ch ${prevChapter.number}: `}
               {language === 'zh' ? (prevChapter.titleZh || prevChapter.title) : prevChapter.title}
             </span>
           </button>
@@ -529,7 +478,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
             </span>
             <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-blue-700 transition-colors">
-              {nextChapter.volume !== 0 ? (language === 'zh' ? `第${nextChapter.number}章: ` : `Ch ${nextChapter.number}: `) : ''}
+              {language === 'zh' ? `第${nextChapter.number}章: ` : `Ch ${nextChapter.number}: `}
               {language === 'zh' ? (nextChapter.titleZh || nextChapter.title) : nextChapter.title}
             </span>
           </button>

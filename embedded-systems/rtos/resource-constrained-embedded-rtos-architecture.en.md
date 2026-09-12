@@ -170,25 +170,21 @@ Execution in an ISR should be avoided:
 
 Recommended model:
 
-
-```text
-IRQ
-  -> 快速采样/搬运
-  -> Ring Buffer / Task Notification
-  -> Worker / State Machine
-  -> 业务处理
+```mermaid
+flowchart LR
+    irq([Hardware IRQ]) --> topHalf["Top-Half ISR\n(Fast Sampling / Clear IRQ Flags)"]
+    topHalf --> ipc{"Lightweight IPC Decoupling\n(Ring Buffer / Task Notification)"}
+    ipc --> bottomHalf["Bottom-Half Worker Task / State Machine\n(Full Protocol Parsing / State Transition)"]
+    bottomHalf --> biz([Business Logic Execution])
 ```
-
 
 ### 4.2 The length of the critical section determines the lower limit of interrupt response
 
 If business code turns off/masks interrupts via `CPSID`, `PRIMASK` or `BASEPRI`, then:
 
-
 ```text
-最大关中断时间 ~= 系统可实现的最差中断响应下限
+Maximum interrupt disable time ~= Worst-case interrupt latency achievable by the system
 ```
-
 
 Therefore it should be:
 
@@ -216,19 +212,15 @@ Even if each task stack is adequate, an MSP that is too small may still be overw
 
 Not recommended:
 
-
 ```text
 SysTick ISR -> Feed Watchdog
 ```
 
-
 It is also not recommended to simply:
-
 
 ```text
 Idle Task -> Feed Watchdog
 ```
-
 
 The reason is that the business thread may be deadlocked, but SysTick or Idle still continues to run, and the watchdog will be refreshed with "false health".
 
@@ -236,14 +228,20 @@ The reason is that the business thread may be deadlocked, but SysTick or Idle st
 
 Typical Tickless process:
 
-
-```text
-计算最近唤醒时间
-    -> 配置低功耗定时器
-    -> 关闭 Tick
-    -> WFI
+```mermaid
+flowchart TD
+    start([Enter Idle Task]) --> calc["Calculate Next Task Wakeup Time\n(Next Wakeup Tick)"]
+    calc --> checkMin{"Sleep Duration\n> Minimum Threshold?"}
+    checkMin -->|No| normalIdle["Standard Light Sleep WFI\nKeep SysTick Running"]
+    checkMin -->|Yes| cfgTimer["Configure Low-Power Timer (LPTIM)"]
+    cfgTimer --> stopTick["Stop / Mask Standard SysTick"]
+    stopTick --> raceCheck{"Atomic Check: Any New Interrupt/Task\nBecame Ready During Setup?"}
+    raceCheck -->|Task Ready| abortSleep["Abort Sleep Immediately\nRestore SysTick Scheduling"]
+    raceCheck -->|Safe| enterWFI["Execute WFI / WFE (Deep Sleep)"]
+    enterWFI --> wakeup([Hardware Interrupt Wakeup])
+    wakeup --> compTime["Compensate OS Ticks from LPTIM Count"]
+    compTime --> resumeOS["Restore OS Scheduler & Peripheral Clocks"]
 ```
-
 
 If an asynchronous event occurs between "computation complete" and the actual execution of `WFI`, and a high-priority task is ready, you need to ensure that the kernel does not enter deep sleep by mistake.
 
@@ -262,19 +260,13 @@ Therefore, the low-power entrance must have:
 
 Recommended layering:
 
-
-```text
-Application
-   ↓
-Domain / Service
-   ↓
-Driver Interface
-   ↓
-HAL / BSP
-   ↓
-MMIO / Hardware
+```mermaid
+flowchart TD
+    app["Application Layer"] -->|"High-level Logic"| domain["Domain / Service Layer"]
+    domain -->|"Abstract Device Contract"| drv["Driver Interface Layer"]
+    drv -->|"Zero-cost Inlines / Static Config"| hal["HAL / BSP"]
+    hal -->|"Direct Reads/Writes"| mmio["MMIO / Hardware Registers"]
 ```
-
 
 For extreme resource MCUs, deep runtime dynamic dispatch should be avoided as much as possible. Can use:
 
@@ -288,30 +280,22 @@ The goal is to have the abstraction removed at compile time so that the final in
 
 ### 6.2 Active Object + Hierarchical State Machine (HSM)
 
-Traditional mode:
+Architecture comparison:
 
+```mermaid
+flowchart TD
+    subgraph TRAD["Traditional Model (Heavy SRAM Waste)"]
+        m1["Module A"] --> tA["Task A + Dedicated Stack A"]
+        m2["Module B"] --> tB["Task B + Dedicated Stack B"]
+        m3["Module C"] --> tC["Task C + Dedicated Stack C"]
+    end
 
-```text
-功能 A -> Task A + Stack A
-功能 B -> Task B + Stack B
-功能 C -> Task C + Stack C
-...
+    subgraph AO["Active Object Pattern (Minimal SRAM Footprint)"]
+        events["Unified Event Queue"] --> aoTask["Single Active Object Task (Shared Stack)"]
+        aoTask --> hsm["Hierarchical State Machine (HSM)"]
+        hsm --> rtc["Run-to-Completion Fast Dispatch"]
+    end
 ```
-
-
-More lightweight mode:
-
-
-```text
-Event Queue
-   ↓
-Active Object Task
-   ↓
-Hierarchical State Machine
-   ↓
-Run-to-Completion
-```
-
 
 Core principles:
 
@@ -332,7 +316,6 @@ In high-frequency UART / ADC / SPI DMA data paths, the single producer single co
 
 ### 7.1 Basic structure
 
-
 ```c
 typedef struct {
     uint8_t data[SIZE];
@@ -340,7 +323,6 @@ typedef struct {
     volatile uint32_t tail;
 } ring_buffer_t;
 ```
-
 
 Among them:
 
@@ -350,11 +332,9 @@ Among them:
 
 Index wraparound can be done using:
 
-
 ```c
 next = (index + 1U) & (SIZE - 1U);
 ```
-
 
 Avoid runtime division/modulo overhead.
 
@@ -362,13 +342,11 @@ Avoid runtime division/modulo overhead.
 
 The key principles are:
 
-
-```text
-先写数据
-   ↓
-Memory Barrier
-   ↓
-再发布 head
+```mermaid
+flowchart TD
+    wData["1. Write Data to ring_buffer->data[head]"] --> dmb["2. Execute Memory Barrier (__DMB() / Compiler Barrier)"]
+    dmb --> pubHead["3. Publish Head Pointer: ring_buffer->head = next"]
+    pubHead --> notify["4. Notify / Wake Consumer Task"]
 ```
 
 
@@ -587,21 +565,23 @@ If the MCU has an MPU, a Guard Region can be deployed at the boundary of the tas
 
 ### 12.1 Architecture
 
+```mermaid
+flowchart TD
+    subgraph TASKS["Task Heartbeats (Independent Bits)"]
+        tA["Task A (Business Loop)"] -->|"Atomic set BIT0"| reg[("Heartbeat Bitmap Register")]
+        tB["Task B (Protocol Worker)"] -->|"Atomic set BIT1"| reg
+        tC["Task C (Sensor Sampler)"] -->|"Atomic set BIT2"| reg
+    end
 
-```text
-Task A ---- set BIT0 ----┐
-Task B ---- set BIT1 ----┤
-Task C ---- set BIT2 ----┤
-                         ↓
-              Watchdog Supervisor
-                         ↓
-             All bits healthy ?
-                 /           \
-              yes             no
-               ↓               ↓
-           Feed HW WDG      Do not feed
-               ↓               ↓
-          Clear bitmap       HW Reset
+    reg --> supervisor["Watchdog Supervisor Task"]
+    supervisor --> check{"All Critical Task Bits\nHealthy & Present?"}
+
+    check -->|"Yes (All Healthy)"| feed["Feed Hardware Watchdog"]
+    feed --> clear["Atomic Clear Heartbeat Bitmap"] --> nextPeriod["Next Supervision Period"]
+
+    check -->|"No (Deadlock / Starvation)"| refuse["Refuse to Feed Watchdog"]
+    refuse --> faultSave["Preserve Minimal Crash Context to Backup RAM"]
+    faultSave --> hwReset(["Hardware Watchdog Timeout -> Chip Reset"])
 ```
 
 
@@ -679,35 +659,32 @@ Suggestions:
 
 ## 14. Recommended system-level lightweight architecture
 
+```mermaid
+flowchart TD
+    subgraph L1["Application Layer"]
+        app["HSM / Active Objects / Domain State Machines\n(Run-to-Completion, Non-blocking)"]
+    end
 
-```text
-+--------------------------------------------------+
-|                  Application                     |
-|  HSM / Active Objects / Domain State Machines    |
-+------------------------+-------------------------+
-                         |
-                         v
-+--------------------------------------------------+
-|                 Event / Service Layer            |
-| Task Notification | Event Queue | Timer Event    |
-+------------------------+-------------------------+
-                         |
-                         v
-+--------------------------------------------------+
-|              Few RTOS Worker Tasks               |
-|  Control | IO | Storage/Protocol | Supervisor    |
-+------------------------+-------------------------+
-                         |
-                         v
-+--------------------------------------------------+
-|              Driver / HAL / BSP                  |
-| UART | SPI | I2C | ADC | DMA | Flash | WDG       |
-+------------------------+-------------------------+
-                         |
-                         v
-+--------------------------------------------------+
-|                    Hardware                      |
-+--------------------------------------------------+
+    subgraph L2["Event & Service Layer"]
+        events["Task Notification | Event Queue | Timer Events"]
+    end
+
+    subgraph L3["Minimal RTOS Worker Tasks"]
+        workers["Control Task | I/O Task | Protocol/Storage Task | Supervisor"]
+    end
+
+    subgraph L4["Driver / HAL / BSP"]
+        drivers["UART | SPI | I2C | ADC | DMA | Flash | WDG"]
+    end
+
+    subgraph L5["Hardware Layer"]
+        hw["MCU Peripherals / Physical Pins / NVIC"]
+    end
+
+    app -->|"Dispatch Events"| events
+    events -->|"Async Wakeup"| workers
+    workers -->|"Non-blocking / DMA"| drivers
+    drivers -->|"Direct Register MMIO"| hw
 ```
 
 
@@ -784,24 +761,18 @@ Threads are not module boundaries. There can be many modules, but RTOS tasks sho
 
 Priority suggestions:
 
-
-```text
-Task Notification
-    ↓
-SPSC Ring Buffer
-    ↓
-Queue / Semaphore
-    ↓
-复杂共享锁结构
+```mermaid
+flowchart TD
+    p1["1. Task Notification\n(Lightest: Zero RAM control block, directly uses TCB)"] -->|Needs Data Buffering| p2["2. SPSC Ring Buffer\n(Lock-free single-producer single-consumer, minimal overhead)"]
+    p2 -->|Needs Multi-Producer/Consumer| p3["3. OS Queue / Semaphore\n(Requires wait-lists & scheduler context switches)"]
+    p3 -->|Avoid When Possible| p4["4. Complex Shared Mutexes / Locks\n(Requires priority inheritance & strict ordering, lowest priority)"]
 ```
-
 
 The premise is that the communication semantics do match, and correctness cannot be sacrificed for the sake of "lightweight".
 
 ### 16.4 Defensive monitoring must cover the entire system
 
 The reliability system includes at least:
-
 
 ```text
 Stack Analysis
@@ -811,7 +782,6 @@ Stack Analysis
 + Reset Reason
 + Minimal Crash Context
 ```
-
 
 ### 16.5 All optimizations must be measurable
 
@@ -830,32 +800,17 @@ The final basis for judgment is not "theoretically lighter", but:
 
 ## 17. Recommended verification process
 
-
-```text
-1. 定义 MCU 资源预算
-       ↓
-2. 静态设计任务/缓冲/IPC
-       ↓
-3. 编译生成 ELF + MAP + SU
-       ↓
-4. 检查 Flash/RAM/Stack
-       ↓
-5. 测量 ISR / WCET / Latency
-       ↓
-6. 压力测试 + 峰值业务
-       ↓
-7. 故障注入
-   - Task hang
-   - Lock deadlock
-   - Ring overflow
-   - Stack pressure
-   - DMA burst
-       ↓
-8. 验证 Watchdog / Reset Recovery
-       ↓
-9. 低功耗与唤醒时序验证
-       ↓
-10. 量产配置冻结
+```mermaid
+flowchart TD
+    s1["1. Define MCU Resource Budget\n(ROM / RAM / Stack / ISR Latency Limits)"] --> s2["2. Static Design\n(Task Partitioning / Buffer Sizing / IPC Selection)"]
+    s2 --> s3["3. Compilation & Analysis\n(Generate ELF + .map + .su Static Call Graph)"]
+    s3 --> s4["4. Static Resource Audit\n(Flash/RAM Utilization & Worst-Case Stack)"]
+    s4 --> s5["5. Real-Time Instrumentation\n(GPIO/Trace Measurement of ISR / WCET / Latency)"]
+    s5 --> s6["6. Stress & Peak Load Testing\n(Sustained Maximum Throughput Stability)"]
+    s6 --> s7["7. Fault Injection Matrix\n(Task Hang / Deadlock / Ring Overflow / Stack Pressure / Burst DMA)"]
+    s7 --> s8["8. Disaster Recovery Verification\n(Watchdog Action & Backup RAM Context Capture)"]
+    s8 --> s9["9. Low Power & Timing Verification\n(Tickless Wakeup Timing & Race Window Guards)"]
+    s9 --> s10["10. Freeze Production Config\n(Disable Debug Hooks & Lock Down Partitions)"]
 ```
 
 
