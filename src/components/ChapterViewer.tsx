@@ -5,6 +5,7 @@ import rehypeRaw from 'rehype-raw';
 import { Chapter, Language } from '../types';
 import { resolveImageUrl } from '../content/catalog';
 import { CalloutBlock } from '../renderers/CalloutBlock';
+import { isTextFlowchart, TextFlowchart } from '../renderers/TextFlowchart';
 import { I18N_STRINGS } from '../data/i18n';
 import { MermaidDiagram } from './MermaidDiagram';
 import {
@@ -356,6 +357,18 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                   }
                   const body = Object.keys(attributes).length > 0 ? lines.slice(1).join('\n') : codeString;
                   return <CalloutBlock name="callout" attributes={attributes}>{body}</CalloutBlock>;
+                }
+
+                if (lang === 'text' && isTextFlowchart(codeString)) {
+                  return (
+                    <TextFlowchart
+                      source={codeString}
+                      onCopy={() => handleCopyCode(codeString, codeId)}
+                      copied={copiedCodeId === codeId}
+                      copyLabel={t.chapter.copy}
+                      copiedLabel={t.chapter.copied}
+                    />
+                  );
                 }
 
                 return (
