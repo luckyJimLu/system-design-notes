@@ -518,3 +518,25 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
         )}
 
         {nextChapter ? (
+          <button
+            id="next-chapter-btn"
+            type="button"
+            onClick={() => onSelectChapter(nextChapter.id)}
+            className="flex-1 p-4 rounded-lg border border-neutral-200 hover:border-neutral-400 hover:bg-neutral-50/60 text-right transition-all group focus-visible:ring-2 focus-visible:ring-neutral-900 shadow-2xs"
+          >
+            <span className="text-[11px] font-mono font-medium text-neutral-400 uppercase tracking-wider flex items-center justify-end gap-1">
+              {t.chapter.nextChapter}
+              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+            </span>
+            <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-blue-700 transition-colors">
+              {nextChapter.volume !== 0 ? (language === 'zh' ? `第${nextChapter.number}章: ` : `Ch ${nextChapter.number}: `) : ''}
+              {language === 'zh' ? (nextChapter.titleZh || nextChapter.title) : nextChapter.title}
+            </span>
+          </button>
+        ) : (
+          <div className="flex-1" />
+        )}
+      </footer>
+    </article>
+  );
+};
