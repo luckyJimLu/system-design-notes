@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "validate:content": "node scripts/validate-content.mjs",
+    "build": "npm run validate:content && vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },

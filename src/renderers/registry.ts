@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from 'react';
+import { CalloutBlock } from './CalloutBlock';
 
 export interface BlockProps {
   name: string;
@@ -37,3 +38,14 @@ export function createRendererRegistry(plugins: RendererPlugin[] = []): Renderer
   for (const plugin of plugins) plugin.register(registry);
   return registry;
 }
+
+/** Built-in semantic blocks available to Markdown content. */
+export const builtinRendererRegistry = createRendererRegistry([
+  {
+    name: 'builtin-callout',
+    version: '1.0.0',
+    register(registry) {
+      registry.registerBlock('callout', CalloutBlock);
+    },
+  },
+]);

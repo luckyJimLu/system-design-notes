@@ -58,6 +58,7 @@ export function loadImportedContentWithDiagnostics(): ImportedContentResult {
       markdown: parsed.body,
       ...(locale === 'zh' ? { markdownZh: parsed.body } : { markdownEn: parsed.body }),
       estimatedReadTimeMinutes: Math.max(2, Math.round(parsed.body.split(/\s+/).filter(Boolean).length / 200)),
+      source: { type: 'local', path },
     };
     const key = document.id;
     const pair = groups.get(key) || {};

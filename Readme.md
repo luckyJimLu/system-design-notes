@@ -76,6 +76,7 @@ content/40-your-topic/images/architecture.png
 ```bash
 npm install
 npm run dev       # 启动开发服务器
+npm run validate:content # 校验 content/ 文档
 npm run lint      # TypeScript 检查
 npm run build     # 生产构建
 ```
@@ -89,46 +90,46 @@ Markdown → front matter Loader → ContentDocument
 
 ### 6. 嵌入式资料入口
 
-- [嵌入式系统总目录](./embedded-systems/README.md)
-- [RTOS 研究报告](./embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
-- [lwIP TCP/IP 协议栈](./embedded-systems/networking/lwip-tcpip-deepwiki.md)
-- [Modem / 网络诊断](./embedded-systems/modemlog/README.md)
+- [嵌入式系统总目录](./content/29.%20embedded-systems/README.md)
+- [RTOS 研究报告](./content/29.%20embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
+- [lwIP TCP/IP 协议栈](./content/29.%20embedded-systems/networking/lwip-tcpip-deepwiki.md)
+- [Modem / 网络诊断](./content/29.%20embedded-systems/modemlog/README.md)
 
 ## 🔧 Embedded Systems
 
-- [Embedded Systems 总目录](./embedded-systems/)
-- [RTOS：资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](./embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
-- [Modem / Networking：Modem 诊断与 MCU 网络架构](./embedded-systems/modemlog/)
+- [Embedded Systems 总目录](./content/29.%20embedded-systems/)
+- [RTOS：资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](./content/29.%20embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
+- [Modem / Networking：Modem 诊断与 MCU 网络架构](./content/29.%20embedded-systems/modemlog/)
 
 
- * [Chapter 1 - Scale From Zero To Millions Of Users](./01.%20Scaling/)
- * [Chapter 2 - Back-of-the-envelope Estimation](./02.%20Back%20Of%20the%20Envelope%20Estimation/)
- * [Chapter 3 - A Framework For System Design Interviews](./03.%20System%20Design%20Framework/)
- * [Chapter 4 - Design A Rate Limiter](./04.%20Rate%20Limiter//)
- * [Chapter 5 - Design Consistent Hashing](./05.%20Consistent%20Hashing/)
- * [Chapter 6 - Design A Key-Value Store](./06.%20Key-Value%20Store/)
- * [Chapter 7 - Design A Unique ID Generator In Distributed Systems](./07.%20Unique-Id%20Generator/)
- * [Chapter 8 - Design A URL Shortener](./08.%20URL%20Shortener/)
- * [Chapter 9 - Design A Web Crawler](./09.%20Web%20Crawler/)
- * [Chapter 10 - Design A Notification System](./10.%20Notification%20System/)
- * [Chapter 11 - Design A News Feed System](./11.%20News%20Feed%20System/)
- * [Chapter 12 - Design A Chat System](./12.%20Chat%20System/)
- * [Chapter 13 - Design A Search Autocomplete System](./13.%20Search%20Autocomplete/)
- * [Chapter 14 - Design YouTube](./14.%20Youtube/)
- * [Chapter 15 - Design Google Drive](./15.%20Google%20Drive/)
- * [Chapter 16 - Proximity Service](./16.%20Proximity%20Service/)
- * [Chapter 17 - Nearby Friends](./17.%20Nearby%20Friends/)
- * [Chapter 18 - Design Google Maps](./18.%20Google%20Maps/)
- * [Chapter 19 - Distributed Message Queue](./19.%20Distributed%20Message%20Queue/)
- * [Chapter 20 - Metrics Monitoring and Alerting System](./20.%20Metrics%20Monitoring%20and%20Alerting%20System/)
- * [Chapter 21 - Ad Click Event Aggregation](./21.%20Ad%20Click%20Event%20Aggregation/)
- * [Chapter 22 - Hotel Reservation System](./22.%20Hotel%20Reservation%20System/)
- * [Chapter 23 - Distributed Email Service](./23.%20Distributed%20Email%20Service/)
- * [Chapter 24 - S3-like Object Storage](./24.%20S3-like%20Object%20Storage/)
- * [Chapter 25 - Real-time Gaming Leaderboard](./25.%20Real-time%20Gaming%20Leaderboard/)
- * [Chapter 26 - Payment System](./26.%20Payment%20System/)
- * [Chapter 27 - Digital Wallet](./27.%20%20Digital%20Wallet/)
- * [Chapter 28 - Stock Exchange](./28.%20Stock%20Exchange/)
+ * [Chapter 1 - Scale From Zero To Millions Of Users](./content/01.%20Scaling/)
+ * [Chapter 2 - Back-of-the-envelope Estimation](./content/02.%20Back%20Of%20the%20Envelope%20Estimation/)
+ * [Chapter 3 - A Framework For System Design Interviews](./content/03.%20System%20Design%20Framework/)
+ * [Chapter 4 - Design A Rate Limiter](./content/04.%20Rate%20Limiter/)
+ * [Chapter 5 - Design Consistent Hashing](./content/05.%20Consistent%20Hashing/)
+ * [Chapter 6 - Design A Key-Value Store](./content/06.%20Key-Value%20Store/)
+ * [Chapter 7 - Design A Unique ID Generator In Distributed Systems](./content/07.%20Unique-Id%20Generator/)
+ * [Chapter 8 - Design A URL Shortener](./content/08.%20URL%20Shortener/)
+ * [Chapter 9 - Design A Web Crawler](./content/09.%20Web%20Crawler/)
+ * [Chapter 10 - Design A Notification System](./content/10.%20Notification%20System/)
+ * [Chapter 11 - Design A News Feed System](./content/11.%20News%20Feed%20System/)
+ * [Chapter 12 - Design A Chat System](./content/12.%20Chat%20System/)
+ * [Chapter 13 - Design A Search Autocomplete System](./content/13.%20Search%20Autocomplete/)
+ * [Chapter 14 - Design YouTube](./content/14.%20Youtube/)
+ * [Chapter 15 - Design Google Drive](./content/15.%20Google%20Drive/)
+ * [Chapter 16 - Proximity Service](./content/16.%20Proximity%20Service/)
+ * [Chapter 17 - Nearby Friends](./content/17.%20Nearby%20Friends/)
+ * [Chapter 18 - Design Google Maps](./content/18.%20Google%20Maps/)
+ * [Chapter 19 - Distributed Message Queue](./content/19.%20Distributed%20Message%20Queue/)
+ * [Chapter 20 - Metrics Monitoring and Alerting System](./content/20.%20Metrics%20Monitoring%20and%20Alerting%20System/)
+ * [Chapter 21 - Ad Click Event Aggregation](./content/21.%20Ad%20Click%20Event%20Aggregation/)
+ * [Chapter 22 - Hotel Reservation System](./content/22.%20Hotel%20Reservation%20System/)
+ * [Chapter 23 - Distributed Email Service](./content/23.%20Distributed%20Email%20Service/)
+ * [Chapter 24 - S3-like Object Storage](./content/24.%20S3-like%20Object%20Storage/)
+ * [Chapter 25 - Real-time Gaming Leaderboard](./content/25.%20Real-time%20Gaming%20Leaderboard/)
+ * [Chapter 26 - Payment System](./content/26.%20Payment%20System/)
+ * [Chapter 27 - Digital Wallet](./content/27.%20%20Digital%20Wallet/)
+ * [Chapter 28 - Stock Exchange](./content/28.%20Stock%20Exchange/)
 
 
 # Additonal Resources

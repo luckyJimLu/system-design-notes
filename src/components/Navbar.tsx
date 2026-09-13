@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Menu, Search, Sparkles, Languages } from 'lucide-react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
+import { truncateTitle } from '../utils/title';
 
 interface NavbarProps {
   onToggleMobileSidebar: () => void;
@@ -45,8 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const displayTitle = currentChapter
     ? language === 'zh'
-      ? currentChapter.titleZh || currentChapter.title
-      : currentChapter.title
+      ? truncateTitle(currentChapter.titleZh || currentChapter.title)
+      : truncateTitle(currentChapter.title)
     : '';
 
   return (
@@ -85,7 +86,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span className="mx-1.5 text-neutral-300">/</span>
                   </span>
                 )}
-                <span className="font-medium text-neutral-900 truncate">
+                <span
+                  className="font-medium text-neutral-900 truncate"
+                  title={language === 'zh' ? currentChapter.titleZh || currentChapter.title : currentChapter.title}
+                >
                   {displayTitle}
                 </span>
               </div>

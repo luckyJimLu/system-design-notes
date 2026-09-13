@@ -220,7 +220,7 @@ def run():
                 tasks.append((en_file, zh_file, 'en', 'zh-CN'))
 
     # 2. Embedded systems chapters (Chinese -> English)
-    embedded_dirs = ['embedded-systems/rtos', 'embedded-systems/modemlog']
+    embedded_dirs = ['content/29. embedded-systems/rtos', 'content/29. embedded-systems/modemlog']
     for edir in embedded_dirs:
         if os.path.exists(edir):
             for fname in sorted(os.listdir(edir)):

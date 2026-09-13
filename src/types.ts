@@ -1,5 +1,12 @@
 export type Language = 'en' | 'zh';
 
+export type DocumentSourceType = 'legacy' | 'local' | 'github' | 'imported';
+
+export interface DocumentSource {
+  type: DocumentSourceType;
+  path: string;
+}
+
 export interface Chapter {
   id: string;
   folderName: string;
@@ -17,6 +24,8 @@ export interface Chapter {
   markdownZh?: string;
   markdownEn?: string;
   estimatedReadTimeMinutes: number;
+  /** Stable content provenance used by loaders and diagnostics. */
+  source?: DocumentSource;
 }
 
 export function getChapterMarkdown(chapter: Chapter, language: Language): string {

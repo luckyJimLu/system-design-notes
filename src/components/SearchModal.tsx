@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, X, ArrowRight } from 'lucide-react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
+import { truncateTitle } from '../utils/title';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -241,7 +242,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             results.map((item, idx) => {
               const isSelected = idx === selectedIndex;
               const ch = item.chapter;
-              const chTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
+              const fullTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
+              const chTitle = truncateTitle(fullTitle);
               const displayTags = (language === 'zh' && ch.tagsZh?.length) ? ch.tagsZh : ch.tags;
 
               return (
@@ -268,7 +270,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className="text-sm font-semibold text-neutral-900 truncate">
-                        {language === 'zh' ? `第 ${ch.number} 章: ` : `Chapter ${ch.number}: `}
+                        {ch.volume !== 0 ? (language === 'zh' ? `第 ${ch.number} 章: ` : `Chapter ${ch.number}: `) : ''}
                         {chTitle}
                       </h4>
                       <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 shrink-0 border border-neutral-200/60">
@@ -278,7 +280,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
                     {language === 'zh' && ch.titleZh && (
                       <p className="text-[11px] font-mono text-neutral-400 truncate">
-                        {ch.title}
+                      {truncateTitle(ch.title)}
                       </p>
                     )}
 

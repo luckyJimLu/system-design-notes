@@ -1,20 +1,24 @@
 import { ALL_CHAPTERS, extractHeadings, resolveImageUrl } from '../data/chaptersData';
+import { loadImportedContentWithDiagnostics } from './loader';
 import type { ContentCatalog } from './types';
 
 /**
  * Content adapter used by the application shell.
  *
- * The legacy glob/metadata loader remains the source implementation for now,
- * but UI code no longer needs to know where documents came from. The adapter
- * can later be replaced by a front-matter/content-package loader without
- * changing navigation, search, or rendering components.
+ * The catalog is the only content boundary consumed by the application shell.
+ * Legacy documents remain available while front-matter documents are migrated
+ * into `content/`.
  */
+const importedContent = loadImportedContentWithDiagnostics();
+const catalogDocuments = [...ALL_CHAPTERS, ...importedContent.documents]
+  .map((document) => document.source ? document : { ...document, source: { type: 'legacy' as const, path: `${document.folderName}/${document.fileName}` } })
+  .sort((a, b) => a.number - b.number || a.id.localeCompare(b.id));
+
 export const contentCatalog: ContentCatalog = {
-  // Keep the legacy glob as the startup source of truth while imported
-  // content is diagnosed independently. This prevents an optional content
-  // package from blocking the entire WebUI during module initialization.
-  documents: ALL_CHAPTERS,
+  documents: catalogDocuments,
   getById: (id) => contentCatalog.documents.find((document) => document.id === id),
 };
 
 export { extractHeadings, resolveImageUrl };
+
+export const contentDiagnostics = importedContent.diagnostics;

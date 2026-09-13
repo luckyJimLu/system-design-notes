@@ -4,8 +4,8 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Chapter, Language } from '../types';
 import { resolveImageUrl } from '../content/catalog';
-import { CalloutBlock } from '../renderers/CalloutBlock';
 import { isTextFlowchart, TextFlowchart } from '../renderers/TextFlowchart';
+import { builtinRendererRegistry } from '../renderers/registry';
 import { I18N_STRINGS } from '../data/i18n';
 import { MermaidDiagram } from './MermaidDiagram';
 import {
@@ -356,7 +356,10 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                     attributes[item[1]] = item[2] || item[3] || item[4] || '';
                   }
                   const body = Object.keys(attributes).length > 0 ? lines.slice(1).join('\n') : codeString;
-                  return <CalloutBlock name="callout" attributes={attributes}>{body}</CalloutBlock>;
+                  const BlockRenderer = builtinRendererRegistry.getBlock('callout');
+                  return BlockRenderer
+                    ? <BlockRenderer name="callout" attributes={attributes}>{body}</BlockRenderer>
+                    : <code {...props}>{children}</code>;
                 }
 
                 if (lang === 'text' && isTextFlowchart(codeString)) {

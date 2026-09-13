@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
+import { truncateTitle } from '../utils/title';
 import {
   CheckCircle2,
   Bookmark,
@@ -198,7 +199,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               const isActive = !isCurrentViewResources && currentChapterId === ch.id;
               const isCompleted = completed.has(ch.id);
               const isBookmarked = bookmarks.has(ch.id);
-              const chTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
+              const fullTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
+              const chTitle = truncateTitle(fullTitle);
 
               return (
                 <div
@@ -226,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {ch.number}
                     </span>
 
-                    <span className="truncate leading-normal">
+                    <span className="truncate leading-normal" title={fullTitle}>
                       {chTitle}
                     </span>
                   </div>
@@ -317,4 +319,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
-

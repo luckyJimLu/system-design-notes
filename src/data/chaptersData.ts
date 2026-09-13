@@ -3,9 +3,7 @@ import { Chapter, HeadingItem } from '../types';
 // Load all markdown files at build time
 const markdownModules = import.meta.glob<string>(
   [
-    '../../[0-9]*/*.md',
-    '../../embedded-systems/**/*.md',
-    '../../modemlog/*.md',
+    '../../content/[0-9]*/**/*.md',
     '../../Readme.md'
   ],
   { query: '?raw', import: 'default', eager: true }
@@ -14,9 +12,7 @@ const markdownModules = import.meta.glob<string>(
 // Load all image assets so Vite bundles and resolves their URLs automatically
 const imageModules = import.meta.glob<string>(
   [
-    '../../[0-9]*/**/images/*.png',
-    '../../embedded-systems/**/images/*.png',
-    '../../modemlog/**/images/*.png'
+    '../../content/[0-9]*/**/images/*.png'
   ],
   { query: '?url', import: 'default', eager: true }
 ) as Record<string, string>;
@@ -26,8 +22,8 @@ const imageModules = import.meta.glob<string>(
 const imageLookupMap = new Map<string, string>();
 
 for (const [key, url] of Object.entries(imageModules)) {
-  // key is e.g. "../../01. Scaling/images/single-server.png"
-  const cleanKey = key.replace(/^\.\.\/\.\.\//, ''); // "01. Scaling/images/single-server.png"
+  // key is e.g. "../../content/01. Scaling/images/single-server.png"
+  const cleanKey = key.replace(/^\.\.\/\.\.\//, ''); // "content/01. Scaling/images/single-server.png"
   imageLookupMap.set(cleanKey.toLowerCase(), url);
 
   const parts = cleanKey.split('/');
@@ -664,11 +660,11 @@ export function getChapters(): Chapter[] {
     let defaultFileName = 'README.md';
 
     for (const key of Object.keys(markdownModules)) {
-      const match = key.match(/\.\.\/\.\.\/(\d+)\.\s*(.*?)\/(Readme|README)(?:\.([a-zA-Z-]+))?\.md$/i);
+      const match = key.match(/\.\.\/\.\.\/content\/(\d+)\.\s*(.*?)\/(Readme|README)(?:\.([a-zA-Z-]+))?\.md$/i);
       if (match && parseInt(match[1], 10) === num) {
-        const exactFolderMatch = key.match(/\.\.\/\.\.\/(.*?)\/(Readme|README)/i);
+        const exactFolderMatch = key.match(/\.\.\/\.\.\/(content\/.*?\/(?:Readme|README))/i);
         if (exactFolderMatch) {
-          folderName = exactFolderMatch[1];
+          folderName = exactFolderMatch[1].replace(/\/(?:Readme|README)$/i, '');
         }
         const langExt = (match[4] || '').toLowerCase();
         if (langExt === 'zh' || langExt === 'zh-cn') {
@@ -716,9 +712,9 @@ export function getChapters(): Chapter[] {
 
   // 2. Process Embedded Systems, RTOS, Modemlog and advanced engineering documents
   const rawEmbeddedKeys = Object.keys(markdownModules).filter(k => {
-    const isEmbeddedOrModem = k.includes('/embedded-systems/') || k.includes('/modemlog/');
+    const isEmbedded = k.includes('embedded-systems/');
     const isReadme = k.toLowerCase().endsWith('/readme.md');
-    return isEmbeddedOrModem && !isReadme;
+    return isEmbedded && !isReadme;
   });
 
   // Group by canonical base file name to pair .zh.md / .en.md / .md together
