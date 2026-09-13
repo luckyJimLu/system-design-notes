@@ -16,7 +16,7 @@ interface TextFlowchartProps {
 }
 
 interface FlowLayout {
-  steps: string[];
+  paths: string[][];
   direction: 'horizontal' | 'vertical';
 }
 
@@ -31,23 +31,34 @@ function parseFlow(source: string): FlowLayout | null {
   if (lines.length < 2 || !FLOW_TOKEN.test(source)) return null;
   FLOW_TOKEN.lastIndex = 0;
 
-  const steps: string[] = [];
+  const paths: string[][] = [];
   for (const line of lines) {
     const parts = line
       .split(FLOW_TOKEN)
       .map(part => part.trim())
       .filter(part => part && !/^[|/\\-]+$/.test(part));
-    steps.push(...parts);
+    if (parts.length === 0) continue;
+
+    // A line beginning with an arrow is a continuation of the preceding path.
+    // This supports readable wrapped text blocks such as `A -> B` / `-> C`.
+    const continuesPreviousPath = /^(?:-{1,3}>|→|⇒|↓|⬇)/.test(line);
+    if (continuesPreviousPath && paths.length > 0) {
+      paths[paths.length - 1].push(...parts);
+    } else {
+      paths.push(parts);
+    }
   }
 
-  const uniqueSteps = steps.filter((step, index) => step !== steps[index - 1]);
-  if (uniqueSteps.length < 2) return null;
+  const normalizedPaths = paths
+    .map(path => path.filter((step, index) => step !== path[index - 1]))
+    .filter(path => path.length >= 2);
+  if (normalizedPaths.length === 0) return null;
 
   return {
-    steps: uniqueSteps,
-    direction: uniqueSteps.length <= 4 && !lines.some(line => /↓|⬇/.test(line))
-      ? 'horizontal'
-      : 'vertical',
+    paths: normalizedPaths,
+    direction: normalizedPaths.length === 1 && lines.some(line => /↓|⬇/.test(line))
+      ? 'vertical'
+      : 'horizontal',
   };
 }
 
@@ -122,15 +133,16 @@ export const TextFlowchart: React.FC<TextFlowchartProps> = ({
   const gap = 40;
   const padding = 24;
   const isHorizontal = layout?.direction === 'horizontal';
-  const width = isHorizontal && layout
-    ? padding * 2 + layout.steps.length * nodeWidth + (layout.steps.length - 1) * gap
-    : nodeWidth + padding * 2;
-  const height = isHorizontal && layout
-    ? nodeHeight + 112
-    : layout
-      ? padding * 2 + layout.steps.length * nodeHeight + (layout.steps.length - 1) * gap + 48
-      : 0;
-  const nodeX = isHorizontal ? padding : padding;
+  const maxPathLength = layout ? Math.max(...layout.paths.map(path => path.length)) : 0;
+  const width = layout
+    ? padding * 2 + (isHorizontal ? maxPathLength * nodeWidth + (maxPathLength - 1) * gap : nodeWidth)
+    : 0;
+  const height = layout
+    ? padding * 2 + (isHorizontal
+      ? layout.paths.length * nodeHeight + (layout.paths.length - 1) * gap
+      : maxPathLength * nodeHeight + (maxPathLength - 1) * gap) + 48
+    : 0;
+  const nodeX = padding;
 
   return (
     <div className="my-6 overflow-hidden rounded-xl border border-neutral-200/90 bg-white shadow-2xs">
@@ -192,15 +204,19 @@ export const TextFlowchart: React.FC<TextFlowchartProps> = ({
             </marker>
           </defs>
 
-          {layout.steps.slice(0, -1).map((_, index) => {
+          {layout.paths.map((path, pathIndex) => path.slice(0, -1).map((_, index) => {
             const fromX = isHorizontal ? nodeX + index * (nodeWidth + gap) + nodeWidth : nodeX + nodeWidth / 2;
-            const fromY = isHorizontal ? 56 + nodeHeight / 2 : padding + index * (nodeHeight + gap) + nodeHeight;
+            const fromY = isHorizontal
+              ? padding + pathIndex * (nodeHeight + gap) + nodeHeight / 2
+              : padding + index * (nodeHeight + gap) + nodeHeight;
             const toX = isHorizontal ? nodeX + (index + 1) * (nodeWidth + gap) : nodeX + nodeWidth / 2;
-            const toY = isHorizontal ? fromY : padding + (index + 1) * (nodeHeight + gap);
+            const toY = isHorizontal
+              ? fromY
+              : padding + (index + 1) * (nodeHeight + gap);
 
             return (
               <path
-                key={`connector-${index}`}
+                key={`connector-${pathIndex}-${index}`}
                 d={isHorizontal ? `M ${fromX} ${fromY} H ${toX}` : `M ${fromX} ${fromY} V ${toY}`}
                 fill="none"
                 stroke="#64748b"
@@ -208,16 +224,18 @@ export const TextFlowchart: React.FC<TextFlowchartProps> = ({
                 markerEnd={`url(#${diagramId}-arrow)`}
               />
             );
-          })}
+          }))}
 
-          {layout.steps.map((step, index) => {
+          {layout.paths.map((path, pathIndex) => path.map((step, index) => {
             const x = nodeX;
-            const y = isHorizontal ? 56 : padding + index * (nodeHeight + gap);
+            const y = isHorizontal
+              ? padding + pathIndex * (nodeHeight + gap)
+              : padding + index * (nodeHeight + gap);
             const lines = wrapLabel(step);
-            const isEndpoint = index === 0 || index === layout.steps.length - 1;
+            const isEndpoint = index === 0 || index === path.length - 1;
 
             return (
-              <g key={`${step}-${index}`}>
+              <g key={`${pathIndex}-${step}-${index}`}>
                 <rect
                   x={x}
                   y={y}
@@ -245,7 +263,7 @@ export const TextFlowchart: React.FC<TextFlowchartProps> = ({
                 </text>
               </g>
             );
-          })}
+          }))}
         </svg>
       </div> : <pre className="m-0 overflow-x-auto px-4 py-5 font-mono text-xs leading-relaxed text-neutral-600">{draft}</pre>}
     </div>
