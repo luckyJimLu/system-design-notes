@@ -226,7 +226,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       all: '全部',
       vol1: '第一卷 (15)',
       vol2: '第二卷 (13)',
-      modem: '嵌入式 / RTOS',
+      modem: '嵌入式',
       saved: '收藏夹'
     },
     sidebar: {
