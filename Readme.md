@@ -1,33 +1,78 @@
+# System Design Notes
 
-# [System Design Interview - An Insider's Guide (Vol 1 and 2)](https://bytebytego.com/courses/system-design-interview)
-These notes are based on the System Design Interview books - [Vol 1 and Vol 2 2nd Ed](https://www.goodreads.com/book/show/54109255-system-design-interview-an-insider-s-guide) 
+基于《System Design Interview — An Insider's Guide》Vol. 1、Vol. 2 的系统设计学习笔记与可视化阅读站点。
 
-## 🌐 Online Website
+- 在线站点：[GitHub Pages](https://luckyJimLu.github.io/system-design-notes/)
+- 原书课程：[ByteByteGo System Design Interview](https://bytebytego.com/courses/system-design-interview)
+- 参考来源：[System Design Interview — Vol. 1 & Vol. 2](https://www.goodreads.com/book/show/54109255-system-design-interview-an-insider-s-guide)
 
-**GitHub Pages:** https://luckyjimlu.github.io/system-design-notes/
+项目采用 React + TypeScript + Vite 构建。内容以 Markdown 为主，WebUI 负责导航、搜索、目录、阅读状态和统一渲染。新增内容通常不需要修改 React 页面代码。
 
-Check the notes here: https://pagefy.io/system-design/system-design-interview-by-alex-xu
+## 1. 整体架构
 
-**Note:** These notes are a work in progress. 
+```mermaid
+flowchart LR
+  A[Markdown 内容与图片] --> B[Vite glob Loader]
+  B --> C[Content Document]
+  D[Legacy chaptersData] --> E[Content Catalog]
+  C --> E
+  E --> F[App Shell]
+  F --> G[导航 / 搜索 / 目录]
+  F --> H[ChapterViewer]
+  H --> I[Markdown Renderers]
+  I --> J[HTML / Mermaid / 图片 / Callout]
+  K[GitHub Actions] --> L[npm ci + Vite build]
+  L --> M[GitHub Pages 静态站点]
+```
 
-## 📖 内容驱动 WebUI 使用指南
+### 1.1 分层职责
 
-本项目将知识内容与 WebUI 渲染分离。新增文档时，通常只需添加 Markdown 文件，不需要修改 React 页面代码。
+| 层 | 主要目录 | 职责 |
+| --- | --- | --- |
+| 内容层 | `content/` | Markdown、front matter、图片和专题资料 |
+| 内容适配层 | `src/content/` | 扫描、解析、校验、语言配对和目录聚合 |
+| 兼容数据层 | `src/data/chaptersData.ts` | 保留尚未迁移的旧章节数据 |
+| 应用壳层 | `src/App.tsx`、`src/components/` | hash 路由、导航、搜索、书签、阅读状态和布局 |
+| 渲染层 | `src/renderers/`、`ChapterViewer.tsx` | Markdown 节点、Callout、文本流程图和 Mermaid 渲染 |
+| 构建发布层 | `vite.config.ts`、`.github/workflows/` | 类型检查、内容校验、静态构建和 GitHub Pages 部署 |
 
-### 1. 新增内容
+应用壳层通过 `contentCatalog` 消费文档，不应直接依赖某个 Markdown 文件或手写章节标题。
 
-在 `content/` 下创建一个主题目录：
+```text
+content/ + chaptersData.ts
+        ↓
+loader / parser / validator
+        ↓
+Content Catalog
+        ↓
+App Shell
+        ↓
+navigation / search / TOC / viewer
+```
+
+## 2. 内容加载机制
+
+### 2.1 新内容：Front Matter 文档
+
+自动加载器位于 `src/content/loader.ts`，当前匹配的文件模式是：
+
+```text
+content/**/index.zh.md
+content/**/index.en.md
+```
+
+每个专题建议使用以下结构：
 
 ```text
 content/
 └── 40-your-topic/
     ├── index.zh.md
-    └── index.en.md
+    ├── index.en.md
+    └── images/
+        └── architecture.png
 ```
 
-文件名使用 `index.zh.md` 或 `index.en.md`，系统会自动扫描、配对并加入导航、搜索和目录。
-
-### 2. 配置 front matter
+文档应包含 front matter：
 
 ```md
 ---
@@ -36,146 +81,168 @@ title: 中文标题
 titleEn: English Title
 order: 40
 description: 文档摘要
-tags: [RTOS, TCP/IP]
+tags: [分布式系统, 数据库]
 ---
 
 # 正文标题
 
-这里直接编写 Markdown 内容。
+这里编写 Markdown 内容。
 ```
 
-`id` 应保持稳定，`order` 控制排序，`title` 和 `titleEn` 用于双语标题，`tags` 用于分类和检索。没有 front matter 的旧文档仍然兼容，但建议新文档完整配置元数据。
+字段约定：
 
-### 3. 使用语义块
+- `id`：稳定的逻辑标识，用于配对、路由和后续兼容；
+- `title`：中文标题；`titleEn`：英文标题；
+- `order`：导航排序值；
+- `description`：摘要；
+- `tags`：搜索和分类标签。
 
-目前支持 `callout`：
+中文与英文文件使用相同的 `id` 配对。缺少某一语言时，站点仍可加载，但内容校验会给出 warning。
 
-````md
-```callout
-type=warning title="注意"
-这里是需要关注的内容。
-```
-````
+### 2.2 旧内容：兼容数据源
 
-可用类型：`info`、`warning`、`danger`、`success`。未来可扩展 `diagram`、`comparison`、`checklist` 等渲染插件。
-
-### 4. 图片与资源
-
-将图片放在主题目录下，并在 Markdown 中使用相对路径：
+当前仓库仍有大量历史文件，例如：
 
 ```text
-content/40-your-topic/images/architecture.png
+content/01. Scaling/Readme.md
+content/01. Scaling/Readme.zh.md
 ```
+
+这些文件不会被当前 `index*.md` Loader 自动发现，而是通过 `src/data/chaptersData.ts` 进入站点。迁移旧专题时，应转换为 `index.zh.md` / `index.en.md` 并补充 front matter；迁移完成后再从旧数据源移除对应条目。
+
+## 3. 渲染与扩展边界
+
+`ChapterViewer` 使用以下能力渲染正文：
+
+- CommonMark / GFM Markdown；
+- 标题、列表、表格、引用、代码块和行内代码；
+- 相对路径图片与图片灯箱；
+- Mermaid 图表；
+- 受控的 `callout` 语义块；
+- 文本流程图和内置 renderer registry。
+
+内容文件只描述知识，不直接写 React/JSX。需要增加新的语义块时，应在 `src/renderers/` 中实现受控 renderer，再由注册表或 Markdown 映射接入。
+
+`src/content/catalog.ts` 是应用层的统一内容边界：
+
+```ts
+contentCatalog.documents
+contentCatalog.getById(id)
+contentDiagnostics
+```
+
+它目前合并两类来源：
+
+1. `src/data/chaptersData.ts` 中的 legacy documents；
+2. `src/content/loader.ts` 导入的 front-matter documents。
+
+这样可以在不破坏既有 hash 路由、书签和阅读进度的前提下逐步迁移内容。
+
+## 4. 新增内容工作流
+
+1. 在 `content/` 下创建专题目录。
+2. 添加 `index.zh.md`，需要英文时再添加 `index.en.md`。
+3. 写入稳定 `id`、`order` 和标题元数据。
+4. 图片放在当前专题目录的 `images/` 下，并使用相对路径引用。
+5. 运行内容校验和 TypeScript 检查。
+6. 在开发服务器中刷新页面确认导航、搜索、目录和正文渲染。
+
+图片示例：
 
 ```md
 ![系统架构](./images/architecture.png)
 ```
 
-### 5. 本地开发与构建
+Callout 示例：
+
+````md
+```callout
+type=warning title="注意"
+这里是需要重点关注的内容。
+```
+````
+
+可用类型包括 `info`、`warning`、`danger` 和 `success`。
+
+## 5. 开发、校验与发布
+
+### 本地开发
 
 ```bash
-npm install
-npm run dev       # 启动开发服务器
-npm run validate:content # 校验 content/ 文档
-npm run lint      # TypeScript 检查
-npm run build     # 生产构建
+npm ci
+npm run dev
 ```
 
-导入链路为：
+开发服务器默认监听 `0.0.0.0:3000`。Vite 会在开发过程中处理匹配的 Markdown 模块；新增或修改内容后，若文件未被热更新识别，刷新页面或重启开发服务器即可。
+
+### 发布前检查
+
+```bash
+npm run validate:content
+npm run lint
+npm run build
+```
+
+- `validate:content`：检查 front matter、ID、语言配对、排序和本地图片引用；
+- `lint`：执行 `tsc --noEmit`；
+- `build`：先校验内容，再生成 `dist/` 静态资源。
+
+### CI/CD
+
+`.github/workflows/deploy-pages.yml` 在 `main` 分支变更或手动触发时执行：
 
 ```text
-Markdown → front matter Loader → ContentDocument
-→ ContentCatalog → 导航 / 搜索 / 目录 / WebUI
+Checkout
+  → Setup Node 24
+  → Ensure lockfile
+  → npm ci
+  → npm run build
+  → Upload Pages artifact
+  → Deploy GitHub Pages
 ```
 
-### 6. 嵌入式资料入口
+正常情况下应提交 `package-lock.json`，以保证 CI 的确定性安装。如果工作树缺少锁文件，CI 会先生成锁文件，再执行 `npm ci`。
+
+## 6. 仓库结构
+
+```text
+.
+├── content/                  # Markdown 内容、图片和专题资料
+├── src/
+│   ├── App.tsx               # 应用壳层与页面状态
+│   ├── components/           # 导航、搜索、阅读器等 UI
+│   ├── content/              # 内容加载、解析、目录和诊断
+│   ├── data/                 # legacy 数据和静态资源数据
+│   ├── renderers/            # 语义块和特殊内容 renderer
+│   └── utils/                # 通用工具
+├── scripts/
+│   └── validate-content.mjs  # 内容质量检查
+├── docs/                     # 架构设计和演进说明
+├── public/                   # 静态入口和 GitHub Pages 回退页
+├── package.json              # 脚本与依赖
+├── package-lock.json         # npm 可复现安装锁文件
+└── vite.config.ts            # Vite 与 GitHub Pages 配置
+```
+
+## 7. 架构演进方向
+
+当前系统处于“legacy 数据源 + front matter 内容源”的迁移阶段。后续可沿以下方向演进：
+
+- 将 `chaptersData.ts` 中的章节逐步迁移到 `content/`；
+- 将目录、搜索和 headings 索引从统一 `ContentDocument` 模型生成；
+- 扩展受控语义块，例如 comparison、checklist 和 diagram；
+- 在需要用户上传内容时，再增加服务端或 Worker 导入层；
+- 保持内容层不依赖 React，避免把文档变成不可移植的可执行代码。
+
+详细设计见：[内容驱动渲染架构](./docs/content-driven-rendering-architecture.md)。
+
+## 8. 相关资料
 
 - [嵌入式系统总目录](./content/29.%20embedded-systems/README.md)
 - [RTOS 研究报告](./content/29.%20embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
 - [lwIP TCP/IP 协议栈](./content/29.%20embedded-systems/networking/lwip-tcpip-deepwiki.md)
 - [Modem / 网络诊断](./content/29.%20embedded-systems/modemlog/README.md)
+- [速率限制器补充资料](https://martinfowler.com/bliki/CircuitBreaker.html)
+- [一致性哈希补充资料](https://tom-e-white.com/2007/11/consistent-hashing.html)
 
-## 🔧 Embedded Systems
-
-- [Embedded Systems 总目录](./content/29.%20embedded-systems/)
-- [RTOS：资源受限嵌入式系统架构设计与 RTOS 核心机制研究报告](./content/29.%20embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
-- [Modem / Networking：Modem 诊断与 MCU 网络架构](./content/29.%20embedded-systems/modemlog/)
-
-
- * [Chapter 1 - Scale From Zero To Millions Of Users](./content/01.%20Scaling/)
- * [Chapter 2 - Back-of-the-envelope Estimation](./content/02.%20Back%20Of%20the%20Envelope%20Estimation/)
- * [Chapter 3 - A Framework For System Design Interviews](./content/03.%20System%20Design%20Framework/)
- * [Chapter 4 - Design A Rate Limiter](./content/04.%20Rate%20Limiter/)
- * [Chapter 5 - Design Consistent Hashing](./content/05.%20Consistent%20Hashing/)
- * [Chapter 6 - Design A Key-Value Store](./content/06.%20Key-Value%20Store/)
- * [Chapter 7 - Design A Unique ID Generator In Distributed Systems](./content/07.%20Unique-Id%20Generator/)
- * [Chapter 8 - Design A URL Shortener](./content/08.%20URL%20Shortener/)
- * [Chapter 9 - Design A Web Crawler](./content/09.%20Web%20Crawler/)
- * [Chapter 10 - Design A Notification System](./content/10.%20Notification%20System/)
- * [Chapter 11 - Design A News Feed System](./content/11.%20News%20Feed%20System/)
- * [Chapter 12 - Design A Chat System](./content/12.%20Chat%20System/)
- * [Chapter 13 - Design A Search Autocomplete System](./content/13.%20Search%20Autocomplete/)
- * [Chapter 14 - Design YouTube](./content/14.%20Youtube/)
- * [Chapter 15 - Design Google Drive](./content/15.%20Google%20Drive/)
- * [Chapter 16 - Proximity Service](./content/16.%20Proximity%20Service/)
- * [Chapter 17 - Nearby Friends](./content/17.%20Nearby%20Friends/)
- * [Chapter 18 - Design Google Maps](./content/18.%20Google%20Maps/)
- * [Chapter 19 - Distributed Message Queue](./content/19.%20Distributed%20Message%20Queue/)
- * [Chapter 20 - Metrics Monitoring and Alerting System](./content/20.%20Metrics%20Monitoring%20and%20Alerting%20System/)
- * [Chapter 21 - Ad Click Event Aggregation](./content/21.%20Ad%20Click%20Event%20Aggregation/)
- * [Chapter 22 - Hotel Reservation System](./content/22.%20Hotel%20Reservation%20System/)
- * [Chapter 23 - Distributed Email Service](./content/23.%20Distributed%20Email%20Service/)
- * [Chapter 24 - S3-like Object Storage](./content/24.%20S3-like%20Object%20Storage/)
- * [Chapter 25 - Real-time Gaming Leaderboard](./content/25.%20Real-time%20Gaming%20Leaderboard/)
- * [Chapter 26 - Payment System](./content/26.%20Payment%20System/)
- * [Chapter 27 - Digital Wallet](./content/27.%20%20Digital%20Wallet/)
- * [Chapter 28 - Stock Exchange](./content/28.%20Stock%20Exchange/)
-
-
-# Additonal Resources
-
-### Rate Limiting
-- [Circuit Breaker Algorithm](https://martinfowler.com/bliki/CircuitBreaker.html)
-- [Uber Rate Limiter](https://github.com/uber-go/ratelimit/blob/master/ratelimit.go)
-
-
-### Consistent Hashing
-- [Consistent Hashing](https://tom-e-white.com/2007/11/consistent-hashing.html)
-- [CS168: Introduction and Consistent Hashing:]( http://theory.stanford.edu/~tim/s16/l/l1.pdf)
-- [Apache Cassandra](http://www.cs.cornell.edu/Projects/ladis2009/papers/Lakshman-ladis2009.PDF)
-- [Scaling Discord](https://blog.discord.com/scaling-elixir-f9b8e1e7c29b)
-- [Google Maglev](https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/44824.pdf)
-
-
-### Key-Value Store
-- [Amazon Dynamo](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)
-- [Cassandra Architecture](https://docs.datastax.com/en/archived/cassandra/3.0/cassandra/architecture/archIntro.html)
-- [Google BigTable Architecture](https://static.googleusercontent.com/media/research.google.com/en//archive/bigtable-osdi06.pdf)
-- [Amazon Dynamo DB Internals](https://www.allthingsdistributed.com/2007/10/amazons_dynamo.html)
-- [Design Patterns in Amazon Dynamo DB](https://www.youtube.com/watch?v=HaEPXoXVf2k)
-- [Internals of Amazon Dynamo DB](https://www.youtube.com/watch?v=yvBR71D0nAQ)
-
-
-### Unique-ID Generator
-- [Ticket Servers: Distributed Unique Primary Keys on the Cheap](https://code.flickr.net/2010/02/08/ticket-servers-distributed-unique-primary-keys-on-the-cheap)
-- [Snowflake](https://blog.twitter.com/engineering/en_us/a/2010/announcing-snowflake.html)
-
-
-### Web Crawler
-- [Web Crawling](http://infolab.stanford.edu/~olston/publications/crawling_survey.pdf)
-- [Google Dynamic Rendering](https://developers.google.com/search/docs/guides/dynamic-rendering)
-
-
-
-### Chat Systems
-- [How Discord stores billions of messages](https://discord.com/blog/how-discord-stores-billions-of-messages)
-- [Flannel: An Application-Level Edge Cache to Make Slack Scale](https://slack.engineering/flannel-an-application-level-edge-cache-to-make-slack-scale/)
-
-
-### Search Autocomplete
-- [How We Built Prefixy](https://medium.com/@prefixyteam/how-we-built-prefixy-a-scalable-prefix-search-service-for-powering-autocomplete-c20f98e2eff1)
-- [Prefix Hash Tree](https://people.eecs.berkeley.edu/~sylvia/papers/pht.pdf)
-
-
-### Youtube
-- [YouTube Architecture](http://highscalability.com/youtube-architecture)
+> 本项目是个人学习笔记，内容持续整理中。涉及原书内容时请以原书和官方资料为准。
