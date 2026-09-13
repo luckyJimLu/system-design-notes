@@ -7,6 +7,7 @@ import { resolveImageUrl } from '../content/catalog';
 import { isTextFlowchart, TextFlowchart } from '../renderers/TextFlowchart';
 import { builtinRendererRegistry } from '../renderers/registry';
 import { I18N_STRINGS } from '../data/i18n';
+import { truncateTitle } from '../utils/title';
 import { MermaidDiagram } from './MermaidDiagram';
 import {
   Bookmark,
