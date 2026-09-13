@@ -114,40 +114,52 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Font Size Selector */}
           <div
-            className="hidden sm:flex items-center bg-neutral-100 p-0.5 rounded-md border border-neutral-200/80"
+            className="flex items-center bg-neutral-100 p-0.5 rounded-md border border-neutral-200/80"
             role="group"
             aria-label="Font size controls"
           >
             <button
+              id="navbar-font-sm"
               type="button"
               onClick={() => onChangeFontSize('sm')}
-              className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                fontSize === 'sm' ? 'bg-white text-neutral-900 font-semibold shadow-2xs' : 'text-neutral-500 hover:text-neutral-800'
+              className={`px-1.5 sm:px-2 py-0.5 text-xs font-mono rounded cursor-pointer transition-all ${
+                fontSize === 'sm'
+                  ? 'bg-white text-neutral-900 font-bold shadow-2xs border border-neutral-200/80'
+                  : 'text-neutral-500 hover:text-neutral-800'
               }`}
               title={t.navbar.fontSizeSmall}
               aria-label={t.navbar.fontSizeSmall}
+              aria-pressed={fontSize === 'sm'}
             >
               A-
             </button>
             <button
+              id="navbar-font-base"
               type="button"
               onClick={() => onChangeFontSize('base')}
-              className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                fontSize === 'base' ? 'bg-white text-neutral-900 font-semibold shadow-2xs' : 'text-neutral-500 hover:text-neutral-800'
+              className={`px-1.5 sm:px-2 py-0.5 text-xs font-mono rounded cursor-pointer transition-all ${
+                fontSize === 'base'
+                  ? 'bg-white text-neutral-900 font-bold shadow-2xs border border-neutral-200/80'
+                  : 'text-neutral-500 hover:text-neutral-800'
               }`}
               title={t.navbar.fontSizeNormal}
               aria-label={t.navbar.fontSizeNormal}
+              aria-pressed={fontSize === 'base'}
             >
               A
             </button>
             <button
+              id="navbar-font-lg"
               type="button"
               onClick={() => onChangeFontSize('lg')}
-              className={`px-1.5 py-0.5 text-xs rounded transition-colors ${
-                fontSize === 'lg' ? 'bg-white text-neutral-900 font-semibold shadow-2xs' : 'text-neutral-500 hover:text-neutral-800'
+              className={`px-1.5 sm:px-2 py-0.5 text-xs font-mono rounded cursor-pointer transition-all ${
+                fontSize === 'lg'
+                  ? 'bg-white text-neutral-900 font-bold shadow-2xs border border-neutral-200/80'
+                  : 'text-neutral-500 hover:text-neutral-800'
               }`}
               title={t.navbar.fontSizeLarge}
               aria-label={t.navbar.fontSizeLarge}
+              aria-pressed={fontSize === 'lg'}
             >
               A+
             </button>

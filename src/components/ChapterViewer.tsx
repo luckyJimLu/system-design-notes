@@ -79,11 +79,53 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
     setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
-  // Font size classes
-  const fontClasses = {
-    sm: 'prose-sm',
-    base: 'prose-base',
-    lg: 'prose-lg'
+  // Font size configuration mapping
+  const fontConfig = {
+    sm: {
+      p: 'text-sm leading-relaxed mb-3.5 text-neutral-800',
+      ul: 'list-disc pl-6 mb-3.5 space-y-1 text-sm leading-relaxed text-neutral-800',
+      ol: 'list-decimal pl-6 mb-3.5 space-y-1 text-sm leading-relaxed text-neutral-800',
+      li: 'text-sm leading-relaxed',
+      h1: 'text-2xl font-bold mt-7 mb-3.5 scroll-mt-20 text-neutral-900 tracking-tight',
+      h2: 'text-lg sm:text-xl font-bold mt-8 mb-3.5 pb-2 border-b border-neutral-200/90 scroll-mt-20 text-neutral-900 flex items-center justify-between group',
+      h3: 'text-base sm:text-lg font-semibold mt-5 mb-2.5 scroll-mt-20 text-neutral-900',
+      table: 'w-full text-left text-xs border-collapse bg-white',
+      th: 'py-2 px-3 border-b border-neutral-200 text-[11px] font-semibold uppercase tracking-wider text-neutral-700',
+      td: 'py-2 px-3 border-b border-neutral-100 text-xs text-neutral-700',
+      blockquote: 'border-l-2 border-neutral-900 bg-neutral-50/70 py-2.5 px-3.5 my-4 rounded-r-md text-neutral-800 text-xs sm:text-sm leading-relaxed',
+      inlineCode: 'font-mono text-[11px] sm:text-xs bg-neutral-100 border border-neutral-200/80 text-neutral-800 px-1.5 py-0.5 rounded font-medium',
+      preCode: 'p-3.5 overflow-x-auto text-[11px] sm:text-xs font-mono leading-relaxed bg-neutral-950 m-0 text-neutral-200',
+    },
+    base: {
+      p: 'text-base leading-relaxed mb-4 text-neutral-800',
+      ul: 'list-disc pl-6 mb-4 space-y-1.5 text-base leading-relaxed text-neutral-800',
+      ol: 'list-decimal pl-6 mb-4 space-y-1.5 text-base leading-relaxed text-neutral-800',
+      li: 'text-base leading-relaxed',
+      h1: 'text-2xl sm:text-3xl font-bold mt-8 mb-4 scroll-mt-20 text-neutral-900 tracking-tight',
+      h2: 'text-xl sm:text-2xl font-bold mt-10 mb-4 pb-2 border-b border-neutral-200/90 scroll-mt-20 text-neutral-900 flex items-center justify-between group',
+      h3: 'text-lg sm:text-xl font-semibold mt-6 mb-3 scroll-mt-20 text-neutral-900',
+      table: 'w-full text-left text-xs sm:text-sm border-collapse bg-white',
+      th: 'py-2.5 px-3.5 border-b border-neutral-200 text-xs font-semibold uppercase tracking-wider text-neutral-700',
+      td: 'py-2.5 px-3.5 border-b border-neutral-100 text-sm text-neutral-700',
+      blockquote: 'border-l-2 border-neutral-900 bg-neutral-50/70 py-3 px-4 my-5 rounded-r-md text-neutral-800 text-sm leading-relaxed',
+      inlineCode: 'font-mono text-xs sm:text-sm bg-neutral-100 border border-neutral-200/80 text-neutral-800 px-1.5 py-0.5 rounded font-medium',
+      preCode: 'p-4 overflow-x-auto text-xs sm:text-sm font-mono leading-relaxed bg-neutral-950 m-0 text-neutral-200',
+    },
+    lg: {
+      p: 'text-lg sm:text-xl leading-relaxed mb-5 text-neutral-800',
+      ul: 'list-disc pl-6 mb-5 space-y-2 text-lg sm:text-xl leading-relaxed text-neutral-800',
+      ol: 'list-decimal pl-6 mb-5 space-y-2 text-lg sm:text-xl leading-relaxed text-neutral-800',
+      li: 'text-lg sm:text-xl leading-relaxed',
+      h1: 'text-3xl sm:text-4xl font-bold mt-10 mb-5 scroll-mt-20 text-neutral-900 tracking-tight',
+      h2: 'text-2xl sm:text-3xl font-bold mt-12 mb-5 pb-2.5 border-b border-neutral-200/90 scroll-mt-20 text-neutral-900 flex items-center justify-between group',
+      h3: 'text-xl sm:text-2xl font-semibold mt-8 mb-4 scroll-mt-20 text-neutral-900',
+      table: 'w-full text-left text-sm sm:text-base border-collapse bg-white',
+      th: 'py-3 px-4 border-b border-neutral-200 text-sm font-semibold uppercase tracking-wider text-neutral-700',
+      td: 'py-3 px-4 border-b border-neutral-100 text-base text-neutral-700',
+      blockquote: 'border-l-2 border-neutral-900 bg-neutral-50/70 py-3.5 px-5 my-6 rounded-r-md text-neutral-800 text-base sm:text-lg leading-relaxed',
+      inlineCode: 'font-mono text-sm sm:text-base bg-neutral-100 border border-neutral-200/80 text-neutral-800 px-2 py-0.5 rounded font-medium',
+      preCode: 'p-5 overflow-x-auto text-sm sm:text-base font-mono leading-relaxed bg-neutral-950 m-0 text-neutral-200',
+    },
   }[fontSize];
 
   // Helper to slugify heading titles to match TableOfContents
@@ -213,7 +255,10 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
       </header>
 
       {/* Main Markdown Content Body */}
-      <div className={`prose max-w-none text-neutral-800 ${fontClasses}`}>
+      <div
+        className="reader-content max-w-none text-neutral-800 transition-all duration-150"
+        data-font-size={fontSize}
+      >
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}
@@ -223,7 +268,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               const text = String(children);
               const id = slugify(text);
               return (
-                <h1 id={id} className="text-2xl sm:text-3xl font-bold mt-8 mb-4 scroll-mt-20 text-neutral-900 tracking-tight">
+                <h1 id={id} className={fontConfig.h1}>
                   {children}
                 </h1>
               );
@@ -233,7 +278,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               const text = String(children);
               const id = slugify(text);
               return (
-                <h2 id={id} className="text-xl sm:text-2xl font-bold mt-10 mb-4 pb-2 border-b border-neutral-200/90 scroll-mt-20 text-neutral-900 flex items-center justify-between group">
+                <h2 id={id} className={fontConfig.h2}>
                   <span>{children}</span>
                   <a
                     href={`#${id}`}
@@ -250,28 +295,31 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               const text = String(children);
               const id = slugify(text);
               return (
-                <h3 id={id} className="text-lg sm:text-xl font-semibold mt-6 mb-3 scroll-mt-20 text-neutral-900">
+                <h3 id={id} className={fontConfig.h3}>
                   {children}
                 </h3>
               );
             },
             // Paragraph
             p: ({ children }) => {
-              return <p className="leading-relaxed mb-4 text-neutral-800">{children}</p>;
+              return <p className={fontConfig.p}>{children}</p>;
             },
             // Unordered List
             ul: ({ children }) => {
-              return <ul className="list-disc pl-6 mb-4 space-y-1.5 text-neutral-800">{children}</ul>;
+              return <ul className={fontConfig.ul}>{children}</ul>;
             },
             // Ordered List
             ol: ({ children }) => {
-              return <ol className="list-decimal pl-6 mb-4 space-y-1.5 text-neutral-800">{children}</ol>;
+              return <ol className={fontConfig.ol}>{children}</ol>;
+            },
+            li: ({ children }) => {
+              return <li className={fontConfig.li}>{children}</li>;
             },
             // Table
             table: ({ children }) => {
               return (
                 <div className="overflow-x-auto my-6 border border-neutral-200 rounded-lg shadow-2xs">
-                  <table className="w-full text-left text-xs sm:text-sm border-collapse bg-white">
+                  <table className={fontConfig.table}>
                     {children}
                   </table>
                 </div>
@@ -281,15 +329,15 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               return <thead className="bg-neutral-50 text-neutral-900 font-semibold border-b border-neutral-200">{children}</thead>;
             },
             th: ({ children }) => {
-              return <th className="py-2.5 px-3.5 border-b border-neutral-200 text-xs font-semibold uppercase tracking-wider text-neutral-700">{children}</th>;
+              return <th className={fontConfig.th}>{children}</th>;
             },
             td: ({ children }) => {
-              return <td className="py-2.5 px-3.5 border-b border-neutral-100 text-neutral-700">{children}</td>;
+              return <td className={fontConfig.td}>{children}</td>;
             },
             // Blockquote
             blockquote: ({ children }) => {
               return (
-                <blockquote className="border-l-2 border-neutral-900 bg-neutral-50/70 py-3 px-4 my-5 rounded-r-md text-neutral-800 text-sm">
+                <blockquote className={fontConfig.blockquote}>
                   {children}
                 </blockquote>
               );
@@ -406,7 +454,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                         )}
                       </button>
                     </div>
-                    <pre className="p-4 overflow-x-auto text-xs font-mono leading-relaxed bg-neutral-950 m-0 text-neutral-200">
+                    <pre className={fontConfig.preCode}>
                       <code>{children}</code>
                     </pre>
                   </div>
@@ -414,7 +462,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               }
 
               return (
-                <code className="font-mono text-xs bg-neutral-100 border border-neutral-200/80 text-neutral-800 px-1.5 py-0.5 rounded font-medium">
+                <code className={fontConfig.inlineCode}>
                   {children}
                 </code>
               );

@@ -85,3 +85,97 @@
     min-width: 640px;
   }
 }
+
+/* Chapter Reading Content Font Size Scaling */
+.reader-content[data-font-size="sm"] {
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+.reader-content[data-font-size="sm"] p,
+.reader-content[data-font-size="sm"] li {
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+.reader-content[data-font-size="sm"] h1 {
+  font-size: 1.5rem;
+}
+.reader-content[data-font-size="sm"] h2 {
+  font-size: 1.25rem;
+}
+.reader-content[data-font-size="sm"] h3 {
+  font-size: 1.05rem;
+}
+.reader-content[data-font-size="sm"] table {
+  font-size: 0.8rem;
+}
+.reader-content[data-font-size="sm"] blockquote {
+  font-size: 0.85rem;
+}
+.reader-content[data-font-size="sm"] code:not(pre code) {
+  font-size: 0.8rem;
+}
+.reader-content[data-font-size="sm"] pre code {
+  font-size: 0.775rem;
+}
+
+.reader-content[data-font-size="base"] {
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.reader-content[data-font-size="base"] p,
+.reader-content[data-font-size="base"] li {
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.reader-content[data-font-size="base"] h1 {
+  font-size: 1.875rem;
+}
+.reader-content[data-font-size="base"] h2 {
+  font-size: 1.5rem;
+}
+.reader-content[data-font-size="base"] h3 {
+  font-size: 1.25rem;
+}
+.reader-content[data-font-size="base"] table {
+  font-size: 0.875rem;
+}
+.reader-content[data-font-size="base"] blockquote {
+  font-size: 0.95rem;
+}
+.reader-content[data-font-size="base"] code:not(pre code) {
+  font-size: 0.875rem;
+}
+.reader-content[data-font-size="base"] pre code {
+  font-size: 0.825rem;
+}
+
+.reader-content[data-font-size="lg"] {
+  font-size: 1.15rem;
+  line-height: 1.8;
+}
+.reader-content[data-font-size="lg"] p,
+.reader-content[data-font-size="lg"] li {
+  font-size: 1.15rem;
+  line-height: 1.8;
+}
+.reader-content[data-font-size="lg"] h1 {
+  font-size: 2.25rem;
+}
+.reader-content[data-font-size="lg"] h2 {
+  font-size: 1.75rem;
+}
+.reader-content[data-font-size="lg"] h3 {
+  font-size: 1.4rem;
+}
+.reader-content[data-font-size="lg"] table {
+  font-size: 0.95rem;
+}
+.reader-content[data-font-size="lg"] blockquote {
+  font-size: 1.05rem;
+}
+.reader-content[data-font-size="lg"] code:not(pre code) {
+  font-size: 0.95rem;
+}
+.reader-content[data-font-size="lg"] pre code {
+  font-size: 0.9rem;
+}
