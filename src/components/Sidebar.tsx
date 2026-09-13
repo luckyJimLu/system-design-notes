@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Bookmark,
   Layers,
-  Sparkles,
   FileText,
   X,
 } from 'lucide-react';
@@ -19,7 +18,6 @@ interface SidebarProps {
   completed: Set<string>;
   onToggleBookmark: (id: string) => void;
   onToggleCompleted: (id: string) => void;
-  onOpenCheatSheet: () => void;
   onOpenResources: () => void;
   isCurrentViewResources: boolean;
   isOpenMobile: boolean;
@@ -35,7 +33,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   completed,
   onToggleBookmark,
   onToggleCompleted,
-  onOpenCheatSheet,
   onOpenResources,
   isCurrentViewResources,
   isOpenMobile,
@@ -104,9 +101,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Reading Progress Indicator */}
-        <div className="px-4 py-2.5 bg-white border-b border-neutral-100">
-          <div className="flex items-center justify-between text-[11px] text-neutral-600 mb-1.5">
-            <span className="font-medium text-neutral-700">{t.readingProgress}</span>
+        <div className="px-4 py-2 bg-white border-b border-neutral-100">
+          <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1.5">
+            <span>{t.readingProgress}</span>
             <span className="font-semibold text-neutral-900 font-mono">
               {completedCount}/{chapters.length} ({progressPercent}%)
             </span>
@@ -206,17 +203,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div
                   key={ch.id}
                   id={`sidebar-chapter-${ch.id}`}
-                  className={`group relative flex items-center justify-between px-2.5 py-2 rounded-md cursor-pointer transition-colors text-xs ${
+                  className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition-colors text-xs focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:outline-none ${
                     isActive
                       ? 'bg-neutral-100 text-neutral-900 font-medium'
                       : 'hover:bg-neutral-50 text-neutral-700'
                   }`}
-                  onClick={() => {
-                    onSelectChapter(ch.id);
-                    if (isOpenMobile) onCloseMobile();
-                  }}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectChapter(ch.id);
+                      if (isOpenMobile) onCloseMobile();
+                    }}
+                    className="flex items-center gap-2.5 min-w-0 pr-2 flex-1 text-left focus-visible:outline-none"
+                  >
                     {/* Compact Chapter Indicator */}
                     <span
                       className={`shrink-0 w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] font-semibold transition-colors ${
@@ -231,7 +231,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span className="truncate leading-normal" title={fullTitle}>
                       {chTitle}
                     </span>
-                  </div>
+                  </button>
 
                   {/* Read / Bookmark Status Controls */}
                   <div className="flex items-center gap-0.5 shrink-0">
@@ -275,24 +275,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Bottom Quick Tools */}
-        <div className="p-3 border-t border-neutral-200 bg-neutral-50/50 space-y-1.5">
-          <button
-            id="sidebar-cheatsheet-btn"
-            type="button"
-            onClick={() => {
-              onOpenCheatSheet();
-              if (isOpenMobile) onCloseMobile();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-neutral-800 bg-white border border-neutral-200 hover:bg-neutral-50 rounded-lg transition-colors shadow-2xs group focus-visible:ring-2 focus-visible:ring-neutral-900"
-          >
-            <span className="flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-neutral-700 group-hover:text-neutral-900" />
-              <span>{t.sidebar.cheatSheetBtn}</span>
-            </span>
-            <span className="text-[10px] text-neutral-400 group-hover:text-neutral-600">{t.sidebar.cheatSheetDesc}</span>
-          </button>
-
+        {/* Secondary navigation */}
+        <div className="p-3 border-t border-neutral-200 bg-neutral-50/50">
           <button
             id="sidebar-resources-btn"
             type="button"
@@ -300,7 +284,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onOpenResources();
               if (isOpenMobile) onCloseMobile();
             }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-lg transition-colors border shadow-2xs group focus-visible:ring-2 focus-visible:ring-neutral-900 ${
+            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-md transition-colors border group focus-visible:ring-2 focus-visible:ring-neutral-900 ${
               isCurrentViewResources
                 ? 'bg-neutral-900 text-white border-neutral-900'
                 : 'text-neutral-800 bg-white border-neutral-200 hover:bg-neutral-50'

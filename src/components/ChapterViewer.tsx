@@ -142,9 +142,9 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
   const currentTags = language === 'zh' ? (chapter.tagsZh || chapter.tags) : chapter.tags;
 
   return (
-    <article className="max-w-4xl mx-auto py-8 px-4 sm:px-8">
+    <article className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-8">
       {/* Top Chapter Header Banner */}
-      <header className="pb-6 mb-8 border-b border-neutral-200/90">
+      <header className="pb-5 mb-7 border-b border-neutral-200/90">
         {/* Meta badges & Action Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
@@ -155,12 +155,6 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                 ? t.chapter.vol2
                 : t.chapter.modem}
             </span>
-
-            {chapter.volume !== 0 && (
-              <span className="text-xs font-medium text-neutral-500 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-200/60 font-mono">
-                {language === 'zh' ? `第 ${chapter.number} 章` : `Chapter ${chapter.number}`}
-              </span>
-            )}
 
             <span className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
               <Clock className="w-3.5 h-3.5 text-neutral-400" />
@@ -218,35 +212,16 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
           {currentTitle}
         </h1>
 
-        {/* Subtitle in other language */}
-        {language === 'zh' && chapter.titleZh && (
-          <p className="text-xs font-mono text-neutral-500 mt-1">
-            English: {chapter.title}
-          </p>
-        )}
-        {language === 'en' && chapter.titleZh && (
-          <p className="text-xs font-mono text-neutral-500 mt-1">
-            中文: {chapter.titleZh}
-          </p>
-        )}
-
-        {/* Executive Summary Card */}
+        {/* Short chapter summary */}
         {currentDesc && (
-          <div className="mt-5 p-4 rounded-lg bg-neutral-50 border border-neutral-200/90 text-xs sm:text-sm text-neutral-700 leading-relaxed">
-            <span className="font-semibold text-neutral-900 mb-1 flex items-center gap-1.5 text-xs uppercase tracking-wider">
-              {t.chapter.summaryHeading}
-            </span>
-            <p className="mt-1.5 leading-relaxed">{currentDesc}</p>
+          <div className="mt-4 text-sm text-neutral-600 leading-relaxed max-w-3xl">
+            <span className="font-semibold text-neutral-900">{t.chapter.summaryHeading} · </span>
+            <span>{currentDesc}</span>
 
             {currentTags.length > 0 && (
-              <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+              <div className="flex items-center gap-2 mt-2 flex-wrap text-xs text-neutral-500">
                 {currentTags.map(tag => (
-                  <span
-                    key={tag}
-                    className="text-[11px] font-mono px-2 py-0.5 rounded bg-white border border-neutral-200 text-neutral-600 shadow-2xs"
-                  >
-                    #{tag}
-                  </span>
+                  <span key={tag}>#{tag}</span>
                 ))}
               </div>
             )}

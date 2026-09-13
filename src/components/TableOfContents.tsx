@@ -60,10 +60,10 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ headings, lang
   return (
     <nav
       aria-label={t.chapter.onThisPage}
-      className="w-64 shrink-0 hidden xl:block sticky top-20 self-start pl-4 py-2"
+      className="w-56 shrink-0 hidden xl:block sticky top-20 self-start pl-3 py-2"
     >
-      <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-        <ListTree className="w-3.5 h-3.5 text-neutral-400" />
+      <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+        <ListTree className="w-3.5 h-3.5 text-neutral-400" aria-hidden="true" />
         <span>{t.chapter.onThisPage}</span>
       </div>
 
@@ -77,7 +77,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ headings, lang
               key={heading.id}
               href={`#${heading.id}`}
               onClick={(e) => handleScrollTo(heading.id, e)}
-              className={`group flex items-start gap-1.5 py-1.5 px-2 rounded-md transition-colors ${
+              className={`group flex items-start gap-1.5 py-1 px-2 rounded-md transition-colors ${
                 isH3 ? 'pl-4 text-neutral-500' : 'text-neutral-700'
               } ${
                 isActive

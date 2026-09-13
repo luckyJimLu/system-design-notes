@@ -60,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         />
       </div>
 
-      <div className="flex items-center justify-between px-3 sm:px-6 h-13">
+      <div className="flex items-center justify-between px-3 sm:px-6 h-12">
         {/* Left Side: Mobile Menu toggle + Chapter Title */}
         <div className="flex items-center gap-2.5 min-w-0 pr-2">
           <button
@@ -109,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             aria-label={language === 'zh' ? '切换为 English' : '切换为 中文'}
           >
             <Languages className="w-3.5 h-3.5 text-neutral-500" />
-            <span className="font-mono text-[11px] font-semibold">{language === 'zh' ? '中 / EN' : 'EN / 中'}</span>
+            <span className="font-mono text-[11px] font-semibold">{language === 'zh' ? 'EN' : '中文'}</span>
           </button>
 
           {/* Font Size Selector */}

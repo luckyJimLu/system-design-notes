@@ -64,7 +64,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6">
+    <div className="max-w-5xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -77,14 +77,14 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
         </button>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-6">
         <span className="text-xs font-mono font-semibold uppercase tracking-wider text-neutral-500">
           {t.badge}
         </span>
         <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 mt-1 tracking-tight">
           {t.title}
         </h1>
-        <p className="text-sm text-neutral-600 mt-2 max-w-3xl leading-relaxed">
+        <p className="text-sm text-neutral-600 mt-2 max-w-2xl leading-relaxed">
           {t.description}
         </p>
       </div>
@@ -141,7 +141,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex flex-col justify-between p-4 bg-white border border-neutral-200 rounded-lg shadow-2xs hover:border-neutral-400 transition-colors"
+            className="group flex flex-col justify-between p-4 bg-white border border-neutral-200 rounded-md hover:border-neutral-400 transition-colors"
           >
             <div>
               <div className="flex items-center justify-between mb-2">

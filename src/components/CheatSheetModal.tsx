@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, Clock, HardDrive, ShieldCheck, Compass } from 'lucide-react';
 import { Language } from '../types';
 import {
@@ -19,7 +19,19 @@ interface CheatSheetModalProps {
 
 export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClose, language = 'en' }) => {
   const [activeTab, setActiveTab] = useState<'latency' | 'power' | 'availability' | 'framework'>('latency');
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const t = I18N_STRINGS[language].cheatSheet;
+
+  useEffect(() => {
+    if (isOpen) {
+      previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      closeButtonRef.current?.focus();
+      return;
+    }
+    previousFocusRef.current?.focus();
+    previousFocusRef.current = null;
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -52,6 +64,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
           <button
             type="button"
             onClick={onClose}
+            ref={closeButtonRef}
             aria-label={t.closeBtn}
             className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-md hover:bg-neutral-100 transition-colors"
           >

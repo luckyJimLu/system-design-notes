@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, X, ArrowRight } from 'lucide-react';
 import { Chapter, Language } from '../types';
-import { I18N_STRINGS } from '../data/i18n';
 import { truncateTitle } from '../utils/title';
 
 interface SearchModalProps {
@@ -22,14 +21,18 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const t = I18N_STRINGS[language];
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
+      previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 50);
       setQuery('');
       setSelectedIndex(0);
+      return () => window.clearTimeout(focusTimer);
     }
+    previousFocusRef.current?.focus();
+    previousFocusRef.current = null;
   }, [isOpen]);
 
   // Handle global shortcut key & escape
@@ -244,8 +247,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               const ch = item.chapter;
               const fullTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
               const chTitle = truncateTitle(fullTitle);
-              const displayTags = (language === 'zh' && ch.tagsZh?.length) ? ch.tagsZh : ch.tags;
-
               return (
                 <div
                   key={ch.id}
@@ -278,26 +279,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                       </span>
                     </div>
 
-                    {language === 'zh' && ch.titleZh && (
-                      <p className="text-[11px] font-mono text-neutral-400 truncate">
-                      {truncateTitle(ch.title)}
-                      </p>
-                    )}
-
                     <p className="text-xs text-neutral-500 mt-1 line-clamp-2 leading-relaxed">
                       {item.snippet}
                     </p>
-
-                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                      {displayTags.slice(0, 4).map(tag => (
-                        <span
-                          key={tag}
-                          className="text-[10px] font-mono px-1.5 py-0.2 bg-white border border-neutral-200 text-neutral-600 rounded"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
                   </div>
 
                   <ArrowRight

@@ -209,7 +209,6 @@ export default function App() {
         completed={completed}
         onToggleBookmark={handleToggleBookmark}
         onToggleCompleted={handleToggleCompleted}
-        onOpenCheatSheet={() => setIsCheatSheetOpen(true)}
         onOpenResources={handleOpenResources}
         isCurrentViewResources={isResourcesView}
         isOpenMobile={isOpenMobileSidebar}
@@ -218,7 +217,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <div className="lg:pl-72 sm:lg:pl-80 flex-1 flex flex-col min-w-0">
+      <div className="lg:pl-72 flex-1 flex flex-col min-w-0">
         {/* Sticky Header Navbar */}
         <Navbar
           onToggleMobileSidebar={() => setIsOpenMobileSidebar(prev => !prev)}
@@ -233,7 +232,7 @@ export default function App() {
         />
 
         {/* Reading Canvas + Table of Contents Layout */}
-        <main className="flex-1 flex justify-center w-full px-2 sm:px-4 lg:px-8 py-4">
+        <main className="flex-1 flex justify-center w-full px-2 sm:px-5 lg:px-8 py-2 sm:py-4">
           <div className="w-full flex justify-center">
             {isResourcesView ? (
               <div className="w-full">
@@ -243,7 +242,7 @@ export default function App() {
                 />
               </div>
             ) : currentChapter ? (
-              <div className="w-full flex justify-center gap-8">
+              <div className="w-full flex justify-center gap-6 xl:gap-8">
                 {/* Center Chapter Content */}
                 <div className="flex-1 min-w-0 max-w-4xl">
                   <ChapterViewer
