@@ -13,7 +13,7 @@
 | Markdown + `react-markdown` | 简单、安全、迁移成本最低 | 复杂交互需要额外语法 | 作为默认基础格式 |
 | MDX | Markdown 中可直接使用 React 组件，扩展能力强 | 内容变成可执行代码；导入远程内容有安全风险；构建链更复杂 | 作为受信任内容的可选高级模式 |
 | Markdoc | 自定义 tag、schema 校验、renderer 解耦，适合复杂文档站 | 需要引入新的 AST/编译链 | 最适合未来的“语义组件”扩展方向 |
-| Docusaurus | 文档站能力成熟，MDX、版本、导航和主题完整 | 迁移当前定制 UI 成本较高，运行时自由度下降 | 借鉴其内容组织，不立即替换现有壳层 |
+| Docusaurus | 文档站能力成熟，MDX、版本、导航和主题完整 | 迁移当前定制 UI 成本较高，运行时自由tiji度下降 | 借鉴其内容组织，不立即替换现有壳层 |
 | Astro Content Collections | 内容 schema 和类型校验优秀，静态站性能好 | 当前 React/Vite 应用迁移成本较大 | 借鉴 schema/构建校验思想 |
 
 MDX 官方定位是“Markdown 中嵌入 JSX/组件”，Docusaurus 已将其用于文档与 React 组件渲染；Markdoc 则强调自定义标签、验证和替换 renderer。这说明“内容描述 + 组件渲染器”是成熟模式，但本项目应先从安全的 Markdown 和受控语义块开始。[1][2][3]

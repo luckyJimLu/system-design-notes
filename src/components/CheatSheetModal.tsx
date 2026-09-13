@@ -21,6 +21,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
   const [activeTab, setActiveTab] = useState<'latency' | 'power' | 'availability' | 'framework'>('latency');
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const t = I18N_STRINGS[language].cheatSheet;
 
   useEffect(() => {
@@ -32,6 +33,23 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
     previousFocusRef.current?.focus();
     previousFocusRef.current = null;
   }, [isOpen]);
+
+  const handleModalKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+    const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -49,6 +67,8 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
         role="dialog"
         aria-modal="true"
         aria-label={t.title}
+        ref={modalRef}
+        onKeyDown={handleModalKeyDown}
         className="w-full max-w-3xl bg-white rounded-xl shadow-xl border border-neutral-200 overflow-hidden flex flex-col max-h-[85vh]"
       >
         {/* Header */}
@@ -79,6 +99,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
               type="button"
               role="tab"
               aria-selected={activeTab === 'latency'}
+              aria-controls="cheatsheet-panel-latency"
               onClick={() => setActiveTab('latency')}
               className={`flex items-center justify-center gap-1.5 py-1 px-3 rounded-md transition-all whitespace-nowrap ${
                 activeTab === 'latency'
@@ -93,6 +114,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
               type="button"
               role="tab"
               aria-selected={activeTab === 'power'}
+              aria-controls="cheatsheet-panel-power"
               onClick={() => setActiveTab('power')}
               className={`flex items-center justify-center gap-1.5 py-1 px-3 rounded-md transition-all whitespace-nowrap ${
                 activeTab === 'power'
@@ -107,6 +129,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
               type="button"
               role="tab"
               aria-selected={activeTab === 'availability'}
+              aria-controls="cheatsheet-panel-availability"
               onClick={() => setActiveTab('availability')}
               className={`flex items-center justify-center gap-1.5 py-1 px-3 rounded-md transition-all whitespace-nowrap ${
                 activeTab === 'availability'
@@ -121,6 +144,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
               type="button"
               role="tab"
               aria-selected={activeTab === 'framework'}
+              aria-controls="cheatsheet-panel-framework"
               onClick={() => setActiveTab('framework')}
               className={`flex items-center justify-center gap-1.5 py-1 px-3 rounded-md transition-all whitespace-nowrap ${
                 activeTab === 'framework'
@@ -137,7 +161,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
         {/* Tab Body */}
         <div className="flex-1 overflow-y-auto p-6 bg-white">
           {activeTab === 'latency' && (
-            <div className="space-y-4">
+            <div id="cheatsheet-panel-latency" role="tabpanel" aria-label={t.tabs.latency} className="space-y-4">
               <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 leading-relaxed">
                 <span className="font-semibold text-neutral-900">{language === 'zh' ? '核心要点：' : 'Key Takeaway:'}</span> {t.latencyTakeaway}
               </div>
@@ -172,7 +196,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
           )}
 
           {activeTab === 'power' && (
-            <div className="space-y-4">
+            <div id="cheatsheet-panel-power" role="tabpanel" aria-label={t.tabs.power} className="space-y-4">
               <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 leading-relaxed">
                 <span>{t.powerIntro}</span>
                 <div className="mt-1.5 flex flex-wrap gap-2 text-neutral-900 font-mono text-[11px]">
@@ -207,7 +231,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
           )}
 
           {activeTab === 'availability' && (
-            <div className="space-y-4">
+            <div id="cheatsheet-panel-availability" role="tabpanel" aria-label={t.tabs.availability} className="space-y-4">
               <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 leading-relaxed">
                 {t.availIntro}
               </div>
@@ -236,7 +260,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
           )}
 
           {activeTab === 'framework' && (
-            <div className="space-y-4">
+            <div id="cheatsheet-panel-framework" role="tabpanel" aria-label={t.tabs.framework} className="space-y-4">
               <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 leading-relaxed">
                 {t.frameworkIntro}
               </div>

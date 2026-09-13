@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
 import { truncateTitle } from '../utils/title';
@@ -7,6 +7,7 @@ import {
   Bookmark,
   Layers,
   FileText,
+  ChevronRight,
   X,
 } from 'lucide-react';
 
@@ -40,7 +41,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
   language
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'vol1' | 'vol2' | 'modem' | 'saved'>('all');
+  const [isDesktopVisible, setIsDesktopVisible] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const hideTimerRef = useRef<number | null>(null);
   const t = I18N_STRINGS[language];
+
+  const showDesktopSidebar = () => {
+    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    setIsDesktopVisible(true);
+  };
+
+  const hideDesktopSidebarSoon = () => {
+    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = window.setTimeout(() => {
+      const activeElement = document.activeElement;
+      if (!sidebarRef.current?.contains(activeElement)) setIsDesktopVisible(false);
+    }, 280);
+  };
+
+  useEffect(() => {
+    if (sidebarRef.current) sidebarRef.current.inert = !isDesktopVisible && !isOpenMobile;
+    return () => {
+      if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    };
+  }, [isDesktopVisible, isOpenMobile]);
 
   // Filter chapters based on active tab
   const filteredChapters = chapters.filter(c => {
@@ -52,7 +76,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   });
 
   const completedCount = completed.size;
-  const progressPercent = Math.round((completedCount / chapters.length) * 100);
+  const progressPercent = chapters.length === 0
+    ? 0
+    : Math.min(100, Math.round((completedCount / chapters.length) * 100));
 
   const vol1Count = chapters.filter(c => c.volume === 1).length;
   const vol2Count = chapters.filter(c => c.volume === 2).length;
@@ -69,11 +95,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
+      <button
+        type="button"
+        onMouseEnter={showDesktopSidebar}
+        onFocus={showDesktopSidebar}
+        onClick={showDesktopSidebar}
+        className="fixed left-0 top-1/2 z-30 hidden h-20 w-3 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-neutral-200 bg-white/90 text-neutral-400 shadow-sm transition-colors hover:text-neutral-900 focus-visible:flex lg:flex"
+        aria-label={language === 'zh' ? '显示章节导航' : 'Show chapter navigation'}
+        title={language === 'zh' ? '显示章节导航' : 'Show chapter navigation'}
+      >
+        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+
       {/* Sidebar Container */}
       <aside
+        ref={sidebarRef}
+        id="left-navigation-rail"
         aria-label={t.appTitle}
-        className={`fixed top-0 bottom-0 left-0 z-40 w-72 sm:w-80 bg-white border-r border-neutral-200 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 ${
-          isOpenMobile ? 'translate-x-0 shadow-xl' : '-translate-x-full'
+        onMouseEnter={showDesktopSidebar}
+        onMouseLeave={hideDesktopSidebarSoon}
+        onFocus={showDesktopSidebar}
+        onBlur={event => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) hideDesktopSidebarSoon();
+        }}
+        aria-hidden={!isOpenMobile && !isDesktopVisible}
+        className={`fixed top-0 bottom-0 left-0 z-40 w-72 sm:w-80 bg-white border-r border-neutral-200 flex flex-col transition-transform duration-200 ease-in-out ${
+          isOpenMobile
+            ? 'translate-x-0 shadow-xl'
+            : isDesktopVisible
+              ? '-translate-x-full lg:translate-x-0'
+              : '-translate-x-full'
         }`}
       >
         {/* Brand Header */}
@@ -118,11 +169,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Volume & Section Segmented Tabs */}
         <div className="p-2 border-b border-neutral-200/80 bg-neutral-50/60">
-          <div className="grid grid-cols-5 gap-1 p-0.5 bg-neutral-200/60 rounded-lg text-xs font-medium">
+          <div className="flex gap-1 p-0.5 bg-neutral-200/60 rounded-lg text-xs font-medium overflow-x-auto">
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`py-1 rounded-md transition-all text-center ${
+              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'all'
                   ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
                   : 'text-neutral-600 hover:text-neutral-900'
@@ -134,7 +185,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('vol1')}
-              className={`py-1 rounded-md transition-all text-center ${
+              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'vol1'
                   ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
                   : 'text-neutral-600 hover:text-neutral-900'
@@ -146,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('vol2')}
-              className={`py-1 rounded-md transition-all text-center ${
+              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'vol2'
                   ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
                   : 'text-neutral-600 hover:text-neutral-900'
@@ -158,7 +209,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('modem')}
-              className={`py-1 rounded-md transition-all text-center ${
+              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'modem'
                   ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
                   : 'text-neutral-600 hover:text-neutral-900'
@@ -170,7 +221,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('saved')}
-              className={`py-1 rounded-md transition-all flex items-center justify-center gap-1 ${
+              className={`shrink-0 px-2 py-1 rounded-md transition-all flex items-center justify-center gap-1 ${
                 activeTab === 'saved'
                   ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
                   : 'text-neutral-600 hover:text-neutral-900'
@@ -203,7 +254,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div
                   key={ch.id}
                   id={`sidebar-chapter-${ch.id}`}
-                  className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-md cursor-pointer transition-colors text-xs focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:outline-none ${
+                  className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors text-xs ${
                     isActive
                       ? 'bg-neutral-100 text-neutral-900 font-medium'
                       : 'hover:bg-neutral-50 text-neutral-700'
@@ -244,7 +295,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={`p-1 rounded transition-colors ${
                         isBookmarked
                           ? 'text-amber-600'
-                          : 'text-neutral-300 opacity-0 group-hover:opacity-100 hover:text-neutral-700'
+                          : 'text-neutral-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-neutral-700'
                       }`}
                       aria-label={isBookmarked ? 'Remove Bookmark' : 'Bookmark Chapter'}
                       title={isBookmarked ? 'Remove Bookmark' : 'Bookmark Chapter'}
@@ -261,7 +312,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={`p-1 rounded transition-colors ${
                         isCompleted
                           ? 'text-emerald-600'
-                          : 'text-neutral-300 opacity-0 group-hover:opacity-100 hover:text-neutral-700'
+                          : 'text-neutral-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-neutral-700'
                       }`}
                       aria-label={isCompleted ? 'Mark as Incomplete' : 'Mark as Read'}
                       title={isCompleted ? 'Mark as Incomplete' : 'Mark as Read'}

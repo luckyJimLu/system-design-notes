@@ -114,11 +114,11 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
     appSubtitle: 'Alex Xu Vol 1 & 2 • Architecture',
     searchPlaceholder: 'Quick search topics...',
     searchKbd: '⌘K',
-    readingProgress: 'Reading Progress',
+    readingProgress: 'Completed chapters',
     tabs: {
       all: 'All',
-      vol1: 'Vol 1 (15)',
-      vol2: 'Vol 2 (13)',
+      vol1: 'Vol 1',
+      vol2: 'Vol 2',
       modem: 'Embedded / RTOS',
       saved: 'Saved'
     },
@@ -149,7 +149,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       bookmarked: 'Bookmarked',
       markRead: 'Mark as Read',
       completed: 'Completed',
-      summaryHeading: 'Chapter Summary & Key Concepts',
+      summaryHeading: 'Summary',
       prevChapter: 'Previous Chapter',
       nextChapter: 'Next Chapter',
       copy: 'Copy',
@@ -177,10 +177,10 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       badge: 'System Design Quick Reference',
       title: 'Back of the Envelope & Interview Cheat Sheet',
       tabs: {
-        latency: 'Latency Numbers (Jeff Dean)',
-        power: 'Powers of Two & Storage',
-        availability: 'Availability & SLA (9s)',
-        framework: '4-Step Interview Strategy'
+        latency: 'Latency',
+        power: 'Capacity',
+        availability: 'SLA',
+        framework: 'Interview'
       },
       latencyTakeaway: 'Key Takeaway: Memory is fast, but disks and networks are slow. By caching in RAM and minimizing cross-datacenter round trips, you gain orders of magnitude in throughput.',
       latencyColOp: 'Operation',
@@ -221,11 +221,11 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
     appSubtitle: 'Alex Xu 卷1与卷2 • 架构笔记',
     searchPlaceholder: '快捷搜索章节、技术栈 (⌘K)...',
     searchKbd: '⌘K',
-    readingProgress: '阅读与复习进度',
+    readingProgress: '已读章节',
     tabs: {
       all: '全部',
-      vol1: '第一卷 (15)',
-      vol2: '第二卷 (13)',
+      vol1: '第一卷',
+      vol2: '第二卷',
       modem: '嵌入式',
       saved: '收藏夹'
     },
@@ -256,7 +256,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       bookmarked: '已收藏',
       markRead: '标记已读',
       completed: '已读完',
-      summaryHeading: '本章核心架构要点与知识点精析',
+      summaryHeading: '摘要',
       prevChapter: '上一章',
       nextChapter: '下一章',
       copy: '复制代码',
@@ -284,10 +284,10 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       badge: '系统设计面试必备常数',
       title: '粗略估算 (Back of the Envelope) 与面试速查表',
       tabs: {
-        latency: '延时数据常数 (Jeff Dean)',
-        power: '2的幂次方与容量换算',
-        availability: '高可用性与 SLA (几个9)',
-        framework: '4步面试法与沟通技巧'
+        latency: '延迟',
+        power: '容量',
+        availability: 'SLA',
+        framework: '面试法'
       },
       latencyTakeaway: '核心结论：内存访问极快，磁盘与跨机房网络访问极慢。通过 RAM 缓存与减少跨数据中心往返，系统吞吐量可提升数个数量级。',
       latencyColOp: '操作类型',

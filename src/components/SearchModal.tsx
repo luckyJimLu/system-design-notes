@@ -21,6 +21,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -163,6 +164,23 @@ export const SearchModal: React.FC<SearchModalProps> = ({
 
   // Keyboard navigation within results
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Tab') {
+      const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable && focusable.length > 0) {
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+      return;
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIndex(prev => (prev + 1) % Math.max(1, results.length));
@@ -194,6 +212,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label={language === 'zh' ? '全局搜索' : 'Search Chapters'}
+        ref={modalRef}
         className="w-full max-w-2xl bg-white rounded-xl shadow-xl border border-neutral-200 overflow-hidden flex flex-col max-h-[80vh]"
         onKeyDown={handleKeyDown}
       >
@@ -204,6 +223,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             ref={inputRef}
             id="search-input"
             type="text"
+            aria-label={language === 'zh' ? '搜索章节' : 'Search chapters'}
             placeholder={
               language === 'zh'
                 ? '搜索系统设计章节、架构模式、标签 (例如：限流、哈希、布隆过滤器、消息队列)...'
@@ -248,7 +268,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               const fullTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
               const chTitle = truncateTitle(fullTitle);
               return (
-                <div
+                <button
                   key={ch.id}
                   id={`search-item-${ch.id}`}
                   onClick={() => {
@@ -256,7 +276,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                     onClose();
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`p-2.5 rounded-lg cursor-pointer transition-colors flex items-start gap-3 ${
+                  aria-label={`${language === 'zh' ? '打开章节' : 'Open chapter'}: ${fullTitle}`}
+                  className={`w-full p-2.5 rounded-lg cursor-pointer transition-colors flex items-start gap-3 text-left ${
                     isSelected ? 'bg-neutral-100 text-neutral-900' : 'hover:bg-neutral-50 text-neutral-700'
                   }`}
                 >
@@ -285,11 +306,12 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   </div>
 
                   <ArrowRight
+                    aria-hidden="true"
                     className={`w-4 h-4 mt-2 shrink-0 transition-opacity ${
                       isSelected ? 'text-neutral-900 opacity-100' : 'opacity-0'
                     }`}
                   />
-                </div>
+                </button>
               );
             })
           )}

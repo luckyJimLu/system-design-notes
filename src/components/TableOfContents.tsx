@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HeadingItem, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
 import { ListTree, ChevronRight } from 'lucide-react';
@@ -10,7 +10,26 @@ interface TableOfContentsProps {
 
 export const TableOfContents: React.FC<TableOfContentsProps> = ({ headings, language = 'en' }) => {
   const [activeId, setActiveId] = useState<string>('');
+  const [isVisible, setIsVisible] = useState(false);
+  const railRef = useRef<HTMLElement>(null);
+  const hideTimerRef = useRef<number | null>(null);
   const t = I18N_STRINGS[language];
+
+  const showRail = () => {
+    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    setIsVisible(true);
+  };
+
+  const hideRailSoon = () => {
+    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = window.setTimeout(() => {
+      if (!railRef.current?.contains(document.activeElement)) setIsVisible(false);
+    }, 280);
+  };
+
+  useEffect(() => () => {
+    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (headings.length === 0) return;
@@ -58,10 +77,33 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ headings, lang
   };
 
   return (
-    <nav
-      aria-label={t.chapter.onThisPage}
-      className="w-56 shrink-0 hidden xl:block sticky top-20 self-start pl-3 py-2"
-    >
+    <>
+      <button
+        type="button"
+        onMouseEnter={showRail}
+        onFocus={showRail}
+        onClick={showRail}
+        className="fixed right-0 top-1/2 z-30 hidden h-20 w-3 -translate-y-1/2 items-center justify-center rounded-l-md border border-r-0 border-neutral-200 bg-white/90 text-neutral-400 shadow-sm transition-colors hover:text-neutral-900 focus-visible:flex xl:flex"
+        aria-label={language === 'zh' ? '显示本章目录' : 'Show table of contents'}
+        title={language === 'zh' ? '显示本章目录' : 'Show table of contents'}
+      >
+        <ChevronRight className="h-3.5 w-3.5 rotate-180" aria-hidden="true" />
+      </button>
+
+      <nav
+        ref={railRef}
+        aria-label={t.chapter.onThisPage}
+        aria-hidden={!isVisible}
+        onMouseEnter={showRail}
+        onMouseLeave={hideRailSoon}
+        onFocus={showRail}
+        onBlur={event => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) hideRailSoon();
+        }}
+        className={`fixed right-0 top-20 z-20 hidden w-56 rounded-l-lg border border-r-0 border-neutral-200 bg-white/95 py-2 pl-3 shadow-lg backdrop-blur-sm transition-transform duration-200 xl:block ${
+          isVisible ? 'translate-x-0' : 'translate-x-[calc(100%-0.75rem)]'
+        }`}
+      >
       <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
         <ListTree className="w-3.5 h-3.5 text-neutral-400" aria-hidden="true" />
         <span>{t.chapter.onThisPage}</span>
@@ -95,6 +137,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({ headings, lang
           );
         })}
       </div>
-    </nav>
+      </nav>
+    </>
   );
 };

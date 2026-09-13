@@ -97,6 +97,9 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
   const startPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+  const fullscreenModalRef = useRef<HTMLDivElement>(null);
+  const fullscreenCloseRef = useRef<HTMLButtonElement>(null);
+  const previousFullscreenFocusRef = useRef<HTMLElement | null>(null);
 
   const cleanCode = code.trim();
 
@@ -175,6 +178,10 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
 
   // Keyboard navigation for fullscreen modal
   useEffect(() => {
+    if (isFullscreen) {
+      previousFullscreenFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      window.requestAnimationFrame(() => fullscreenCloseRef.current?.focus());
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isFullscreen) return;
       if (e.key === 'Escape') {
@@ -189,8 +196,31 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (isFullscreen) {
+        previousFullscreenFocusRef.current?.focus();
+        previousFullscreenFocusRef.current = null;
+      }
+    };
   }, [isFullscreen]);
+
+  const handleFullscreenKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+    const focusable = fullscreenModalRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   const t = {
     diagramView: language === 'zh' ? '流程图' : 'Diagram',
@@ -387,9 +417,11 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
       {/* Fullscreen Lightbox Modal */}
       {isFullscreen && (
         <div
+          ref={fullscreenModalRef}
           role="dialog"
           aria-modal="true"
           aria-label={t.diagramView}
+          onKeyDown={handleFullscreenKeyDown}
           className="fixed inset-0 z-50 flex flex-col bg-neutral-950/90 backdrop-blur-xs text-neutral-100 animate-in fade-in duration-150"
         >
           {/* Top Controls Bar */}
@@ -450,6 +482,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
                   setIsFullscreen(false);
                   handleResetZoom();
                 }}
+                ref={fullscreenCloseRef}
                 aria-label={t.exitFullscreen}
                 title={t.exitFullscreen}
                 className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"

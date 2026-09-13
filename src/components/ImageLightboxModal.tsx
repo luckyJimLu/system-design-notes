@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCcw, Download } from 'lucide-react';
 import { Language } from '../types';
 import { truncateTitle } from '../utils/title';
@@ -19,17 +19,43 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
   language = 'en'
 }) => {
   const [scale, setScale] = useState(1);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Close on Escape key
   useEffect(() => {
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeButtonRef.current?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
+    };
   }, [onClose]);
+
+  const handleModalKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+    const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.5));
@@ -38,17 +64,18 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
   return (
     <div
       id="lightbox-backdrop"
+      ref={modalRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt || (language === 'zh' ? '系统设计架构图' : 'System Design Diagram')}
+      onKeyDown={handleModalKeyDown}
       className="fixed inset-0 z-50 flex flex-col bg-neutral-950/90 backdrop-blur-xs text-neutral-100 animate-in fade-in duration-150"
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
-      role="presentation"
     >
       {/* Header bar */}
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={alt || (language === 'zh' ? '系统设计架构图' : 'System Design Diagram')}
         className="flex items-center justify-between px-6 py-3.5 border-b border-neutral-800 bg-neutral-900/95 select-none"
       >
         <div className="flex flex-col">
@@ -110,6 +137,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
             id="lightbox-close"
             type="button"
             onClick={onClose}
+            ref={closeButtonRef}
             aria-label={language === 'zh' ? '关闭 (Esc)' : 'Close (Esc)'}
             title={language === 'zh' ? '关闭 (Esc)' : 'Close (Esc)'}
             className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
