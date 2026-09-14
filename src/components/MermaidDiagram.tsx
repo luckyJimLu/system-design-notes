@@ -19,8 +19,97 @@ interface MermaidDiagramProps {
   language?: 'zh' | 'en';
 }
 
+interface DiagramSize {
+  width: number;
+  height: number;
+}
+
+const DEFAULT_DIAGRAM_SIZE: DiagramSize = { width: 800, height: 450 };
+
+function prepareSvg(svgSource: string, titleId: string, descId: string, language: 'zh' | 'en') {
+  // Mermaid sanitizes labels in strict mode. This second boundary strips
+  // executable markup while preserving XHTML used for visible node labels.
+  const documentNode = new DOMParser().parseFromString(svgSource, 'text/html');
+  const svg = documentNode.querySelector('svg');
+
+  if (!svg) {
+    throw new Error(language === 'zh' ? 'Mermaid 未生成有效的 SVG' : 'Mermaid did not produce a valid SVG');
+  }
+
+  svg.querySelectorAll('script, iframe, object, embed, link, meta').forEach(node => node.remove());
+  svg.querySelectorAll('*').forEach(element => {
+    for (const attribute of [...element.attributes]) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (name.startsWith('on') || ((name === 'href' || name === 'xlink:href') && value.startsWith('javascript:'))) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  });
+
+  const viewBox = (svg.getAttribute('viewBox') || '')
+    .split(/[\s,]+/)
+    .map(Number);
+  const widthAttribute = Number.parseFloat(svg.getAttribute('width') || '');
+  const heightAttribute = Number.parseFloat(svg.getAttribute('height') || '');
+  const width = viewBox.length === 4 && viewBox[2] > 0
+    ? viewBox[2]
+    : Number.isFinite(widthAttribute) && widthAttribute > 0
+      ? widthAttribute
+      : DEFAULT_DIAGRAM_SIZE.width;
+  const height = viewBox.length === 4 && viewBox[3] > 0
+    ? viewBox[3]
+    : Number.isFinite(heightAttribute) && heightAttribute > 0
+      ? heightAttribute
+      : DEFAULT_DIAGRAM_SIZE.height;
+
+  if (!svg.hasAttribute('viewBox')) {
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  }
+
+  svg.removeAttribute('style');
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-labelledby', `${titleId} ${descId}`);
+
+  svg.querySelectorAll(':scope > title, :scope > desc').forEach(node => node.remove());
+  const title = documentNode.createElementNS('http://www.w3.org/2000/svg', 'title');
+  title.id = titleId;
+  title.textContent = language === 'zh' ? '文档流程图' : 'Document diagram';
+  const description = documentNode.createElementNS('http://www.w3.org/2000/svg', 'desc');
+  description.id = descId;
+  description.textContent = language === 'zh'
+    ? '根据当前文档中的 Mermaid 源码生成，可缩放并全屏查看。'
+    : 'Generated from the Mermaid source in this document, with zoom and fullscreen controls.';
+  svg.insertBefore(description, svg.firstChild);
+  svg.insertBefore(title, svg.firstChild);
+
+  return {
+    svg: svg.outerHTML,
+    size: { width, height },
+  };
+}
+
+const RenderedSvg: React.FC<{ svgHtml: string; className?: string }> = ({ svgHtml, className }) => {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const documentNode = new DOMParser().parseFromString(svgHtml, 'text/html');
+    const svg = documentNode.querySelector('svg');
+    if (!rootRef.current || !svg) return;
+    rootRef.current.replaceChildren(svg);
+    return () => rootRef.current?.replaceChildren();
+  }, [svgHtml]);
+
+  return <div ref={rootRef} className={className} />;
+};
+
 // Track mermaid initialization
 let mermaidInitialized = false;
+let mermaidRenderQueue: Promise<void> = Promise.resolve();
+let mermaidRenderSequence = 0;
 
 async function getMermaid() {
   const mermaidModule = await import('mermaid');
@@ -28,33 +117,42 @@ async function getMermaid() {
   if (!mermaidInitialized) {
     mermaid.initialize({
       startOnLoad: false,
-      securityLevel: 'loose',
+      securityLevel: 'strict',
       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
       theme: 'neutral',
       themeVariables: {
         fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        fontSize: '13px',
+        fontSize: '14px',
         primaryColor: '#ffffff',
-        primaryTextColor: '#171717',
-        primaryBorderColor: '#a3a3a3',
-        lineColor: '#525252',
-        secondaryColor: '#fafafa',
-        tertiaryColor: '#f5f5f5',
-        nodeBorder: '#737373',
+        primaryTextColor: '#172033',
+        primaryBorderColor: '#64748b',
+        lineColor: '#64748b',
+        secondaryColor: '#f8fafc',
+        tertiaryColor: '#eff6ff',
+        nodeBorder: '#64748b',
         mainBkg: '#ffffff',
-        clusterBkg: '#fafafa',
-        clusterBorder: '#d4d4d4',
+        clusterBkg: '#f8fafc',
+        clusterBorder: '#cbd5e1',
         edgeLabelBackground: '#ffffff',
-        stateLabelColor: '#171717',
+        stateLabelColor: '#172033',
         stateBkg: '#ffffff',
-        labelColor: '#171717',
+        labelColor: '#172033',
+        noteBkgColor: '#fffbeb',
+        noteBorderColor: '#d97706',
+        noteTextColor: '#78350f',
+        actorBkg: '#ffffff',
+        actorBorder: '#64748b',
+        actorTextColor: '#172033',
+        signalColor: '#475569',
+        signalTextColor: '#334155',
       },
       flowchart: {
         htmlLabels: true,
         curve: 'basis',
-        nodeSpacing: 40,
-        rankSpacing: 45,
-        padding: 15,
+        nodeSpacing: 48,
+        rankSpacing: 56,
+        padding: 16,
+        useMaxWidth: false,
       },
       sequence: {
         diagramMarginX: 20,
@@ -82,10 +180,20 @@ async function getMermaid() {
   return mermaid;
 }
 
+async function renderMermaid(id: string, code: string) {
+  const task = mermaidRenderQueue.then(async () => {
+    const mermaid = await getMermaid();
+    return mermaid.render(id, code);
+  });
+  mermaidRenderQueue = task.then(() => undefined, () => undefined);
+  return task;
+}
+
 export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language = 'zh' }) => {
   const rawId = useId().replace(/:/g, '');
   const containerId = `mermaid-${rawId}`;
   const [svgHtml, setSvgHtml] = useState<string>('');
+  const [diagramSize, setDiagramSize] = useState<DiagramSize>(DEFAULT_DIAGRAM_SIZE);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<'diagram' | 'code'>('diagram');
@@ -93,37 +201,56 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
   const [scale, setScale] = useState<number>(1);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isPanning, setIsPanning] = useState<boolean>(false);
-  const [panPosition, setPanPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const startPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const startPanRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number }>({
+    x: 0,
+    y: 0,
+    scrollLeft: 0,
+    scrollTop: 0,
+  });
   const containerRef = useRef<HTMLDivElement>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   const fullscreenModalRef = useRef<HTMLDivElement>(null);
   const fullscreenCloseRef = useRef<HTMLButtonElement>(null);
   const previousFullscreenFocusRef = useRef<HTMLElement | null>(null);
+  const renderRequestRef = useRef<number>(0);
 
   const cleanCode = code.trim();
 
   // Render diagram via mermaid
   const renderDiagram = useCallback(async () => {
+    const requestId = ++renderRequestRef.current;
     setIsLoading(true);
     setError(null);
     try {
-      const mermaid = await getMermaid();
-      const uniqueRenderId = `diagram-${rawId}-${Date.now()}`;
+      const uniqueRenderId = `diagram-${rawId}-${++mermaidRenderSequence}`;
       // Clean and validate code string
-      const { svg } = await mermaid.render(uniqueRenderId, cleanCode);
-      setSvgHtml(svg);
+      const { svg } = await renderMermaid(uniqueRenderId, cleanCode);
+      if (requestId !== renderRequestRef.current) return;
+      const prepared = prepareSvg(
+        svg,
+        `${uniqueRenderId}-title`,
+        `${uniqueRenderId}-description`,
+        language,
+      );
+      setSvgHtml(prepared.svg);
+      setDiagramSize(prepared.size);
     } catch (err: unknown) {
+      if (requestId !== renderRequestRef.current) return;
       console.warn('Mermaid rendering failed:', err);
       const errMsg = err instanceof Error ? err.message : String(err);
       setError(errMsg);
     } finally {
-      setIsLoading(false);
+      if (requestId === renderRequestRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [cleanCode, rawId]);
+  }, [cleanCode, language, rawId]);
 
   useEffect(() => {
     renderDiagram();
+    return () => {
+      renderRequestRef.current += 1;
+    };
   }, [renderDiagram]);
 
   // Handle copy diagram code
@@ -152,29 +279,45 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
   };
 
   // Zoom controls
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.2, 3.0));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.2, 0.4));
+  const handleZoomIn = () => setScale(prev => Math.min(Number((prev + 0.2).toFixed(1)), 3.0));
+  const handleZoomOut = () => setScale(prev => Math.max(Number((prev - 0.2).toFixed(1)), 0.4));
   const handleResetZoom = () => {
     setScale(1);
-    setPanPosition({ x: 0, y: 0 });
-  };
-
-  // Pan handlers for fullscreen
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isFullscreen) return;
-    setIsPanning(true);
-    startPanRef.current = { x: e.clientX - panPosition.x, y: e.clientY - panPosition.y };
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning || !isFullscreen) return;
-    setPanPosition({
-      x: e.clientX - startPanRef.current.x,
-      y: e.clientY - startPanRef.current.y,
+    window.requestAnimationFrame(() => {
+      containerRef.current?.scrollTo({ left: 0, top: 0 });
+      fullscreenContainerRef.current?.scrollTo({ left: 0, top: 0 });
     });
   };
 
-  const handleMouseUp = () => setIsPanning(false);
+  // Pan handlers for fullscreen
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isFullscreen) return;
+    const container = fullscreenContainerRef.current;
+    if (!container || e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsPanning(true);
+    startPanRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: container.scrollLeft,
+      scrollTop: container.scrollTop,
+    };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanning || !isFullscreen) return;
+    const container = fullscreenContainerRef.current;
+    if (!container) return;
+    container.scrollLeft = startPanRef.current.scrollLeft - (e.clientX - startPanRef.current.x);
+    container.scrollTop = startPanRef.current.scrollTop - (e.clientY - startPanRef.current.y);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setIsPanning(false);
+  };
 
   // Keyboard navigation for fullscreen modal
   useEffect(() => {
@@ -243,13 +386,12 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
     <>
       <div
         id={containerId}
-        ref={containerRef}
-        className="my-6 rounded-lg border border-neutral-200 bg-white shadow-2xs overflow-hidden flex flex-col transition-all"
+        className="my-7 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xs"
       >
         {/* Header Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-neutral-50/90 border-b border-neutral-200 text-xs text-neutral-600 select-none">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 select-none">
           {/* View Mode Switcher */}
-          <div className="inline-flex rounded-md bg-neutral-200/70 p-0.5 text-xs font-medium" role="tablist">
+          <div className="inline-flex rounded-md border border-slate-200 bg-white p-0.5 text-xs font-medium" role="tablist">
             <button
               type="button"
               role="tab"
@@ -257,8 +399,8 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
               onClick={() => setViewMode('diagram')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all ${
                 viewMode === 'diagram'
-                  ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  ? 'bg-slate-900 text-white font-semibold'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
@@ -271,8 +413,8 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
               onClick={() => setViewMode('code')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all ${
                 viewMode === 'code'
-                  ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  ? 'bg-slate-900 text-white font-semibold'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <Code className="w-3.5 h-3.5" />
@@ -287,21 +429,23 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
                 <button
                   type="button"
                   onClick={handleZoomOut}
+                  disabled={scale <= 0.4}
                   aria-label={t.zoomOut}
                   title={t.zoomOut}
-                  className="p-1 rounded text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-900"
+                  className="mermaid-tool-button"
                 >
                   <ZoomOut className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-[11px] font-mono text-neutral-500 px-1 select-none">
+                <span className="min-w-10 px-1 text-center font-mono text-[11px] text-slate-500 select-none">
                   {Math.round(scale * 100)}%
                 </span>
                 <button
                   type="button"
                   onClick={handleZoomIn}
+                  disabled={scale >= 3}
                   aria-label={t.zoomIn}
                   title={t.zoomIn}
-                  className="p-1 rounded text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-900"
+                  className="mermaid-tool-button"
                 >
                   <ZoomIn className="w-3.5 h-3.5" />
                 </button>
@@ -310,17 +454,17 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
                   onClick={handleResetZoom}
                   aria-label={t.reset}
                   title={t.reset}
-                  className="p-1 rounded text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-900"
+                  className="mermaid-tool-button"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
-                <div className="w-px h-3.5 bg-neutral-200 mx-0.5" />
+                <div className="mx-0.5 h-4 w-px bg-slate-200" />
                 <button
                   type="button"
                   onClick={handleDownloadSvg}
                   aria-label={t.downloadSvg}
                   title={t.downloadSvg}
-                  className="p-1 rounded text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-900"
+                  className="mermaid-tool-button"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
@@ -329,11 +473,11 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
                   onClick={() => setIsFullscreen(true)}
                   aria-label={t.fullscreen}
                   title={t.fullscreen}
-                  className="p-1 rounded text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-900"
+                  className="mermaid-tool-button"
                 >
                   <Maximize2 className="w-3.5 h-3.5" />
                 </button>
-                <div className="w-px h-3.5 bg-neutral-200 mx-0.5" />
+                <div className="mx-0.5 h-4 w-px bg-slate-200" />
               </>
             )}
 
@@ -342,17 +486,17 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
               onClick={handleCopyCode}
               aria-label={t.copyCode}
               title={t.copyCode}
-              className="flex items-center gap-1 p-1 rounded text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-900 text-xs"
+              className="mermaid-tool-button flex items-center gap-1 text-xs"
             >
               {copied ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-[11px] text-emerald-600 font-medium">{t.copied}</span>
+                  <span className="hidden text-[11px] font-medium text-emerald-600 sm:inline">{t.copied}</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5" />
-                  <span className="text-[11px]">{t.copyCode}</span>
+                  <span className="hidden text-[11px] sm:inline">{t.copyCode}</span>
                 </>
               )}
             </button>
@@ -361,7 +505,10 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
 
         {/* Content Area */}
         {viewMode === 'diagram' ? (
-          <div className="relative min-h-[160px] p-4 bg-white overflow-hidden flex items-center justify-center">
+          <div
+            ref={containerRef}
+            className="mermaid-inline-viewport relative min-h-40 overflow-auto bg-[#fcfcfb] p-3 sm:p-5"
+          >
             {isLoading && (
               <div className="flex items-center gap-2 text-xs text-neutral-400 py-8">
                 <RefreshCw className="w-4 h-4 animate-spin text-neutral-500" />
@@ -394,14 +541,18 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
               </div>
             ) : (
               !isLoading && (
-                <div
-                  className="w-full overflow-x-auto overflow-y-hidden py-2 flex justify-center items-center transition-transform"
-                  style={{
-                    transform: `scale(${scale})`,
-                    transformOrigin: 'top center',
-                  }}
-                  dangerouslySetInnerHTML={{ __html: svgHtml }}
-                />
+                <div className="flex w-max min-w-full justify-center">
+                  <div
+                    className="mermaid-inline-stage shrink-0 transition-[width] duration-150"
+                    style={{
+                      width: `min(${scale * 100}%, ${Math.ceil(diagramSize.width * scale)}px)`,
+                      minWidth: diagramSize.width >= 560 ? 'min(640px, 180vw)' : undefined,
+                      aspectRatio: `${diagramSize.width} / ${diagramSize.height}`,
+                    }}
+                  >
+                    <RenderedSvg svgHtml={svgHtml} className="h-full w-full" />
+                  </div>
+                </div>
               )
             )}
           </div>
@@ -425,7 +576,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
           className="fixed inset-0 z-50 flex flex-col bg-neutral-950/90 backdrop-blur-xs text-neutral-100 animate-in fade-in duration-150"
         >
           {/* Top Controls Bar */}
-          <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-800 bg-neutral-900/95 select-none">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-800 bg-neutral-900/95 px-3 py-3 sm:px-6 select-none">
             <div className="flex items-center gap-3">
               <span className="text-[11px] font-mono uppercase tracking-wider text-neutral-400">
                 {t.diagramView}
@@ -439,9 +590,10 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
               <button
                 type="button"
                 onClick={handleZoomOut}
+                disabled={scale <= 0.4}
                 aria-label={t.zoomOut}
                 title={t.zoomOut}
-                className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
+                className="mermaid-fullscreen-tool"
               >
                 <ZoomOut className="w-4 h-4" />
               </button>
@@ -451,9 +603,10 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
               <button
                 type="button"
                 onClick={handleZoomIn}
+                disabled={scale >= 3}
                 aria-label={t.zoomIn}
                 title={t.zoomIn}
-                className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
+                className="mermaid-fullscreen-tool"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
@@ -462,7 +615,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
                 onClick={handleResetZoom}
                 aria-label={t.reset}
                 title={t.reset}
-                className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
+                className="mermaid-fullscreen-tool"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -472,7 +625,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
                 onClick={handleDownloadSvg}
                 aria-label={t.downloadSvg}
                 title={t.downloadSvg}
-                className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
+                className="mermaid-fullscreen-tool"
               >
                 <Download className="w-4 h-4" />
               </button>
@@ -485,7 +638,7 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
                 ref={fullscreenCloseRef}
                 aria-label={t.exitFullscreen}
                 title={t.exitFullscreen}
-                className="p-1.5 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400"
+                className="mermaid-fullscreen-tool"
               >
                 <Minimize2 className="w-4 h-4" />
               </button>
@@ -495,22 +648,25 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
           {/* Fullscreen Canvas */}
           <div
             ref={fullscreenContainerRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            className={`flex-1 overflow-hidden p-6 flex items-center justify-center bg-white ${
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className={`mermaid-fullscreen-viewport flex-1 overflow-auto bg-[#fcfcfb] ${
               isPanning ? 'cursor-grabbing select-none' : 'cursor-grab'
             }`}
           >
             <div
+              className="mermaid-fullscreen-stage flex items-center justify-center p-4 sm:p-8"
               style={{
-                transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${scale})`,
-                transformOrigin: 'center center',
-                transition: isPanning ? 'none' : 'transform 0.1s ease-out',
+                width: `${scale * 100}%`,
+                height: `${scale * 100}%`,
+                minWidth: '100%',
+                minHeight: '100%',
               }}
-              dangerouslySetInnerHTML={{ __html: svgHtml }}
-            />
+            >
+              <RenderedSvg svgHtml={svgHtml} className="h-full w-full" />
+            </div>
           </div>
         </div>
       )}
