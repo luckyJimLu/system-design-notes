@@ -3,6 +3,8 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    scrollbar-color: rgba(100, 116, 139, 0.55) transparent;
+    scrollbar-width: thin;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -15,11 +17,19 @@
   }
 }
 
+@media (forced-colors: active) {
+  html {
+    scrollbar-color: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 
+  /* The override is intentional: accessibility preference wins over every
+     component-level animation declaration, including generated diagram CSS. */
   *,
   *::before,
   *::after {
@@ -46,6 +56,117 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.6);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(100, 116, 139, 0.78);
+}
+
+/* Mermaid diagrams use a real sized stage instead of transform-only zoom.
+   This keeps the SVG's complete bounds inside the scrollable layout box. */
+.mermaid-inline-viewport {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+}
+
+.mermaid-inline-stage svg,
+.mermaid-fullscreen-stage svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+.mermaid-inline-stage .node rect,
+.mermaid-inline-stage .node polygon,
+.mermaid-inline-stage .node path,
+.mermaid-fullscreen-stage .node rect,
+.mermaid-fullscreen-stage .node polygon,
+.mermaid-fullscreen-stage .node path {
+  stroke-width: 1.15px;
+  filter: none;
+}
+
+.mermaid-inline-stage .cluster rect,
+.mermaid-fullscreen-stage .cluster rect {
+  rx: 6px;
+  ry: 6px;
+  filter: none;
+}
+
+.mermaid-inline-stage .cluster-label,
+.mermaid-fullscreen-stage .cluster-label {
+  font-weight: 600;
+}
+
+.mermaid-inline-stage .edgeLabel,
+.mermaid-fullscreen-stage .edgeLabel {
+  color: #475569;
+  font-size: 12px;
+}
+
+.mermaid-inline-stage .flowchart-link,
+.mermaid-fullscreen-stage .flowchart-link {
+  stroke-width: 1.35px;
+}
+
+.mermaid-tool-button {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px;
+  border-radius: 6px;
+  color: #475569;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.mermaid-tool-button:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.mermaid-tool-button:active {
+  background: #cbd5e1;
+}
+
+.mermaid-tool-button:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.mermaid-fullscreen-tool {
+  display: inline-flex;
+  min-width: 32px;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 6px;
+  color: #e5e7eb;
+  background: #262626;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.mermaid-fullscreen-tool:hover {
+  background: #404040;
+}
+
+.mermaid-fullscreen-tool:active {
+  background: #525252;
+}
+
+.mermaid-fullscreen-tool:disabled {
+  color: #737373;
+  cursor: not-allowed;
+  background: #262626;
+}
+
+.mermaid-fullscreen-viewport {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  touch-action: none;
 }
 
 /* Diagram display: wide process flows should retain their working width while

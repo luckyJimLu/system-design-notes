@@ -176,7 +176,7 @@ export const TextFlowchart: React.FC<TextFlowchartProps> = ({
 
       {isEditing && (
         <div className="border-b border-neutral-200 bg-neutral-50/70 px-3.5 py-3">
-          <textarea value={draft} onChange={event => setDraft(event.target.value)} className="min-h-24 w-full resize-y rounded-md border border-neutral-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed text-neutral-800 outline-none transition-colors focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10" aria-label={editLabel} spellCheck={false} />
+          <textarea value={draft} onChange={event => setDraft(event.target.value)} className="min-h-24 w-full resize-none rounded-md border border-neutral-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed text-neutral-800 outline-none transition-colors focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10" aria-label={editLabel} spellCheck={false} />
           <div className="mt-2 flex items-start justify-between gap-3 text-[11px] text-neutral-500">
             <span>{editorHint}</span>
             <button type="button" onClick={() => setDraft(source)} className="inline-flex shrink-0 items-center gap-1 hover:text-neutral-900">

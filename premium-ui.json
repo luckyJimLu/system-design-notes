@@ -1,0 +1,19 @@
+{
+  "profile": "technical-reader",
+  "sourceRoots": ["src"],
+  "locale": "zh-CN",
+  "requiredCapabilities": ["Select/Listbox", "Scrollbar"],
+  "ownership": {
+    "Select/Listbox": "native",
+    "Scrollbar": "global"
+  },
+  "requiredCommands": ["typecheck", "build"],
+  "commands": {
+    "typecheck": "npm run lint",
+    "build": "npm run build"
+  },
+  "evidence": {
+    "responsiveDiagram": "src/components/MermaidDiagram.tsx",
+    "globalScrollbar": "src/index.css"
+  }
+}
