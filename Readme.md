@@ -238,6 +238,7 @@ Checkout
 
 ## 8. 相关资料
 
+- [shiji-kb](https://github.com/baojie/shiji-kb)
 - [嵌入式系统总目录](./content/29.%20embedded-systems/README.md)
 - [RTOS 研究报告](./content/29.%20embedded-systems/rtos/resource-constrained-embedded-rtos-architecture.md)
 - [lwIP TCP/IP 协议栈](./content/29.%20embedded-systems/networking/lwip-tcpip-deepwiki.md)
