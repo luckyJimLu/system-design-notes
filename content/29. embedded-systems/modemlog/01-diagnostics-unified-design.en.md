@@ -35,21 +35,39 @@ For C++ implementation, please combine [C++ overall architecture and interaction
 ## 3. End-to-end architecture
 
 
-```mermaid
-flowchart TD
-    modemLog["Modem 日志服务"] --> logSocket["MCU ModemLog Socket"]
-    modemChr["Modem CHR服务"] --> chrSocket["MCU CHR Socket"]
-    logSocket --> reactor["Socket Reactor"]
-    chrSocket --> reactor
-    reactor --> logRing["ModemLog 专用块环"]
-    reactor --> chrRing["CHR 专用消息块环"]
-    net["正常 lwIP RX / TX"] --> tap["有界只读 Capture Tap"]
-    tap --> normal["原始业务路径继续"]
-    tap -.->|"尽力复制"| cap["私有 RX / TX 抓包环"]
-    logRing --> storage["唯一 Storage Owner"]
-    chrRing --> storage
-    cap --> storage
-    storage --> files["日志文件、CHR文件、PCAP文件"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "Modem 日志服务" as modemLog
+rectangle "MCU ModemLog Socket" as logSocket
+rectangle "Modem CHR服务" as modemChr
+rectangle "MCU CHR Socket" as chrSocket
+rectangle "Socket Reactor" as reactor
+rectangle "ModemLog 专用块环" as logRing
+rectangle "CHR 专用消息块环" as chrRing
+rectangle "正常 lwIP RX / TX" as net
+rectangle "有界只读 Capture Tap" as tap
+rectangle "原始业务路径继续" as normal
+rectangle "私有 RX / TX 抓包环" as cap
+rectangle "唯一 Storage Owner" as storage
+rectangle "日志文件、CHR文件、PCAP文件" as files
+
+modemLog --> logSocket
+modemChr --> chrSocket
+logSocket --> reactor
+chrSocket --> reactor
+reactor --> logRing
+reactor --> chrRing
+net --> tap
+tap --> normal
+tap ..> cap : 尽力复制
+logRing --> storage
+chrRing --> storage
+cap --> storage
+storage --> files
+@enduml
 ```
 
 
@@ -75,16 +93,29 @@ Use lwIP select plus non-blocking recv/send. "Blocking recv(log), then blocking 
 It is recommended that a loop first processes stop/control commands, and then gives CHR and ModemLog a limited read budget respectively. CHR priority is only the default policy, which does not mean that CHR has been confirmed to be the highest level of importance. Set the maximum total number of bytes, maximum number of cycles and CPU time in each round; actively block a tick if necessary. On a single core, taskYIELD does not guarantee that lower priority tasks will get the CPU.
 
 
-```mermaid
-flowchart TD
-    control["处理控制与停止请求"] --> sets["按空闲配额重建 fd集合"]
-    sets --> wait["select 有限超时"]
-    wait --> chr["CHR 就绪则有限读取"]
-    chr --> log["ModemLog 就绪则有限读取"]
-    log --> parse["保存分帧状态并发布块"]
-    parse --> notify["通知 Storage"]
-    notify --> budget["检查CPU预算和停止状态"]
-    budget --> control
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "处理控制与停止请求" as control
+rectangle "按空闲配额重建 fd集合" as sets
+rectangle "select 有限超时" as wait
+rectangle "CHR 就绪则有限读取" as chr
+rectangle "ModemLog 就绪则有限读取" as log
+rectangle "保存分帧状态并发布块" as parse
+rectangle "通知 Storage" as notify
+rectangle "检查CPU预算和停止状态" as budget
+
+control --> sets
+sets --> wait
+wait --> chr
+chr --> log
+log --> parse
+parse --> notify
+notify --> budget
+budget --> control
+@enduml
 ```
 
 
@@ -179,21 +210,36 @@ By default, a bounded copy is performed: caplen=min(original_length,snaplen), wh
 ### 6.2 Hot path sequence
 
 
-```mermaid
-flowchart TD
-    packet["原包到达观察点"] --> enabled{"启用且在范围内？"}
-    enabled -->|"否"| pass["原路径继续"]
-    enabled -->|"是"| budget{"过滤及包率字节预算通过？"}
-    budget -->|"否"| pass
-    budget -->|"是"| slot{"立即取得私有槽？"}
-    slot -->|"否"| drop["仅增加抓包drop"]
-    slot -->|"是"| copy["限长限链段只读复制"]
-    copy --> valid{"快照完整？"}
-    valid -->|"否"| discard["归还未发布槽并记drop"]
-    valid -->|"是"| publish["release发布槽并通知Storage"]
-    drop --> pass
-    discard --> pass
-    publish --> pass
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "原包到达观察点" as packet
+diamond "启用且在范围内？" as enabled
+rectangle "原路径继续" as pass
+diamond "过滤及包率字节预算通过？" as budget
+diamond "立即取得私有槽？" as slot
+rectangle "仅增加抓包drop" as drop
+rectangle "限长限链段只读复制" as copy
+diamond "快照完整？" as valid
+rectangle "归还未发布槽并记drop" as discard
+rectangle "release发布槽并通知Storage" as publish
+
+packet --> enabled
+enabled --> pass : 否
+enabled --> budget : 是
+budget --> pass : 否
+budget --> slot : 是
+slot --> drop : 否
+slot --> copy : 是
+copy --> valid
+valid --> discard : 否
+valid --> publish : 是
+drop --> pass
+discard --> pass
+publish --> pass
+@enduml
 ```
 
 
@@ -249,16 +295,26 @@ Reactor directly writes Log/CHR into the corresponding production slot; tap dire
 Storage can batch serialize packet capture records into its own exclusive 8 KiB staging area. The capture slot can be returned after being copied to staging, but staging cannot be reused until the write request is completed. If it fails, you can still clearly distinguish between "the original slot has been returned and the record is still staging" and "the record has been discarded" to avoid double release; there is no need to configure independent large staging for each file.
 
 
-```mermaid
-stateDiagram-v2
-    [*] --> FREE
-    FREE --> FILLING: 唯一生产者预约
-    FILLING --> READY: release发布
-    FILLING --> FREE: 取消未发布快照
-    READY --> READING: Storage acquire取得
-    READING --> FREE: 同步消费完成或复制至Storage私有区
-    READING --> ERROR_HELD: IO失败且所有权尚未解除
-    ERROR_HELD --> FREE: 确认DMA停止后显式清理
+```plantuml
+@startuml
+hide empty description
+skinparam shadowing false
+
+state "FREE" as FREE
+state "FILLING" as FILLING
+state "READY" as READY
+state "READING" as READING
+state "ERROR_HELD" as ERROR_HELD
+
+[*] --> FREE
+FREE --> FILLING : 唯一生产者预约
+FILLING --> READY : release发布
+FILLING --> FREE : 取消未发布快照
+READY --> READING : Storage acquire取得
+READING --> FREE : 同步消费完成或复制至Storage私有区
+READING --> ERROR_HELD : IO失败且所有权尚未解除
+ERROR_HELD --> FREE : 确认DMA停止后显式清理
+@enduml
 ```
 
 
@@ -297,16 +353,31 @@ Socket, business channel, netif and physical IPC lane are four different objects
 MCU usually reuses an lwIP stack: WAN is the default interface, and IPC is an independent non-conflicting subnet. Cross-core Socket requires the peer to be compatible with the protocol stack and IP bearer; netif itself does not require a real Ethernet MAC and can bear raw-IP in shared memory/SPI, etc. Modem public network implementation may be routing/NAT, or IP transparent transmission/PPP. The original wan-lan0 plus NAT is only an optional topology; the upstream lwIP should not be assumed to have provided product-level NAT.
 
 
-```mermaid
-flowchart TD
-    diag["两个诊断 Socket"] --> ipc["IPC 地址域"]
-    app["公网应用 Socket"] --> wan["WAN 默认接口"]
-    ipc --> guardI["IPC 出口地址与链路校验"]
-    wan --> guardW["WAN 出口拒绝 IPC 源和目的"]
-    guardI --> local["Modem 本地诊断端点"]
-    guardW --> modemWan["Modem 公网透传或路由"]
-    modemWan --> cell["蜂窝网络"]
-    wan -.->|"只读快照"| capture["MCU 本地 TCPDump"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "两个诊断 Socket" as diag
+rectangle "IPC 地址域" as ipc
+rectangle "公网应用 Socket" as app
+rectangle "WAN 默认接口" as wan
+rectangle "IPC 出口地址与链路校验" as guardI
+rectangle "WAN 出口拒绝 IPC 源和目的" as guardW
+rectangle "Modem 本地诊断端点" as local
+rectangle "Modem 公网透传或路由" as modemWan
+rectangle "蜂窝网络" as cell
+rectangle "MCU 本地 TCPDump" as capture
+
+diag --> ipc
+app --> wan
+ipc --> guardI
+wan --> guardW
+guardI --> local
+guardW --> modemWan
+modemWan --> cell
+wan ..> capture : 只读快照
+@enduml
 ```
 
 
@@ -386,20 +457,21 @@ Start: Storage prepares files and resources; initializes independent session gen
 Stop has two paths: the Socket service stops the source and continues to read the tail/ACK within the deadline, and then is closed by the Owner; Capture only closes the snapshot admission, **does not close WAN netif**, waits for the entered tap to exit, and then empties the private slot. Generation is used to identify the session and does not replace the callback to exit synchronization; the old generation objects are still returned to the original owner, and the buffer cannot be leaked because of "generation mismatch".
 
 
-```mermaid
-sequenceDiagram
-    participant manager as 会话管理
-    participant producer as Reactor或Capture入口
-    participant storage as Storage Owner
-    participant disk as SD驱动
-    manager->>producer: 停止指定业务输入
-    producer->>producer: 禁止新进入并等待在途完成
-    producer-->>manager: 输入已静默
-    manager->>storage: 排空该业务并关闭文件
-    storage->>disk: 完成写入和同步
-    disk-->>storage: 成功或有界故障
-    storage-->>manager: 结果与资源清理确认
-    manager->>manager: 标记STOPPED或FAULTED
+```plantuml
+@startuml
+    participant "会话管理" as manager
+    participant "Reactor或Capture入口" as producer
+    participant "Storage Owner" as storage
+    participant "SD驱动" as disk
+    manager ->> producer : 停止指定业务输入
+    producer ->> producer : 禁止新进入并等待在途完成
+    producer -->> manager : 输入已静默
+    manager ->> storage : 排空该业务并关闭文件
+    storage ->> disk : 完成写入和同步
+    disk -->> storage : 成功或有界故障
+    storage -->> manager : 结果与资源清理确认
+    manager ->> manager : 标记STOPPED或FAULTED
+@enduml
 ```
 
 

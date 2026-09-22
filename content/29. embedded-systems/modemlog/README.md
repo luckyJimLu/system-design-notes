@@ -18,7 +18,7 @@
 
 ### 03. 完整流程图
 
-- [03. Modem 完整 Mermaid 架构与流程图](./03-modem-complete-mermaid-flows.md)
+- [03. Modem 完整 PlantUML 架构与流程图](./03-modem-complete-mermaid-flows.md)
   - 与 01、02 保持一致的端到端数据流、异常流、状态机和时序图。
 
 ## 历史方案与演进记录

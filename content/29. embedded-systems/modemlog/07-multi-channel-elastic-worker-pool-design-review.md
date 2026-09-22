@@ -42,22 +42,38 @@
 
 ## 3. 修订后的总体架构
 
-```mermaid
-flowchart TD
-    PHY["核间物理链路"] --> DEMUX["Channel Demux"]
-    DEMUX --> M["Channel 0<br/>ModemLog Ring"]
-    DEMUX --> T["Channel 1<br/>TCPDump Ring"]
-    DEMUX --> C["Channel 2<br/>CHR Ring"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
 
-    M --> CORE["常驻核心调度Worker"]
-    T --> CORE
-    C --> CORE
+rectangle "核间物理链路" as PHY
+rectangle "Channel Demux" as DEMUX
+rectangle "Channel 0
+ModemLog Ring" as M
+rectangle "Channel 1
+TCPDump Ring" as T
+rectangle "Channel 2
+CHR Ring" as C
+rectangle "常驻核心调度Worker" as CORE
+rectangle "可选Burst Worker" as BURST
+rectangle "Storage请求队列" as SQ
+rectangle "Storage Owner" as STORE
+rectangle "FatFs / SDMMC" as DISK
 
-    CORE -->|"可选计算任务"| BURST["可选Burst Worker"]
-    CORE --> SQ["Storage请求队列"]
-    BURST --> SQ
-    SQ --> STORE["Storage Owner"]
-    STORE --> DISK["FatFs / SDMMC"]
+PHY --> DEMUX
+DEMUX --> M
+DEMUX --> T
+DEMUX --> C
+M --> CORE
+T --> CORE
+C --> CORE
+CORE --> BURST : 可选计算任务
+CORE --> SQ
+BURST --> SQ
+SQ --> STORE
+STORE --> DISK
+@enduml
 ```
 
 ### 线程配置
@@ -134,18 +150,31 @@ void channel_rx_isr(channel_id_t channel,
 
 ## 6. Core Worker调度流程
 
-```mermaid
-flowchart TD
-    WAIT["等待Task Notification"] --> SNAP["获取ready bits"]
-    SNAP --> PICK["按优先级和等待时间选通道"]
-    PICK --> RUN["处理有限字节/时间预算"]
-    RUN --> EMPTY{"该通道已空？"}
-    EMPTY -->|否| AGAIN["保留ready bit"]
-    EMPTY -->|是| CLEAR["原子清除bit并再次检查"]
-    AGAIN --> PICK
-    CLEAR --> MORE{"还有ready通道？"}
-    MORE -->|是| PICK
-    MORE -->|否| WAIT
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "等待Task Notification" as WAIT
+rectangle "获取ready bits" as SNAP
+rectangle "按优先级和等待时间选通道" as PICK
+rectangle "处理有限字节/时间预算" as RUN
+diamond "该通道已空？" as EMPTY
+rectangle "保留ready bit" as AGAIN
+rectangle "原子清除bit并再次检查" as CLEAR
+diamond "还有ready通道？" as MORE
+
+WAIT --> SNAP
+SNAP --> PICK
+PICK --> RUN
+RUN --> EMPTY
+EMPTY --> AGAIN : 否
+EMPTY --> CLEAR : 是
+AGAIN --> PICK
+CLEAR --> MORE
+MORE --> PICK : 是
+MORE --> WAIT : 否
+@enduml
 ```
 
 伪代码：
@@ -253,20 +282,21 @@ typedef struct {
 
 处理顺序：
 
-```mermaid
-sequenceDiagram
-    participant RX as Channel RX
-    participant Core as Core Worker
-    participant Store as Storage Owner
-    participant SD as SD/DMA
+```plantuml
+@startuml
+    participant "Channel RX" as RX
+    participant "Core Worker" as Core
+    participant "Storage Owner" as Store
+    participant "SD/DMA" as SD
 
-    RX->>Core: 设置ready bit
-    Core->>Core: 解析并建立写请求
-    Core->>Store: 提交buffer+generation+sequence
-    Store->>SD: f_write / DMA
-    SD-->>Store: 完成或超时
-    Store-->>Core: completion
-    Core->>Core: 推进commit并释放buffer
+    RX ->> Core : 设置ready bit
+    Core ->> Core : 解析并建立写请求
+    Core ->> Store : 提交buffer+generation+sequence
+    Store ->> SD : f_write / DMA
+    SD -->> Store : 完成或超时
+    Store -->> Core : completion
+    Core ->> Core : 推进commit并释放buffer
+@enduml
 ```
 
 只有满足下面条件才能释放或复用缓冲：
@@ -311,13 +341,24 @@ f_write返回FR_OK
 - 通道级暂停/恢复；
 - 物理队列延迟统计。
 
-```mermaid
-flowchart TD
-    Q0["ModemLog TX Queue"] --> ARB["加权仲裁器"]
-    Q1["TCPDump TX Queue"] --> ARB
-    Q2["CHR TX Queue"] --> ARB
-    ARB --> DMA["共享DMA / IPC链路"]
-    DMA --> DEMUX["对端按Channel ID分流"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "ModemLog TX Queue" as Q0
+rectangle "加权仲裁器" as ARB
+rectangle "TCPDump TX Queue" as Q1
+rectangle "CHR TX Queue" as Q2
+rectangle "共享DMA / IPC链路" as DMA
+rectangle "对端按Channel ID分流" as DEMUX
+
+Q0 --> ARB
+Q1 --> ARB
+Q2 --> ARB
+ARB --> DMA
+DMA --> DEMUX
+@enduml
 ```
 
 CHR和控制业务应拥有不能被ModemLog借走的最小保留credit。
@@ -382,17 +423,29 @@ Burst Worker使用动态任务内存，自身释放所有应用资源后调用 `
 
 ## 14. 生命周期与安全停止
 
-```mermaid
-stateDiagram-v2
-    [*] --> STOPPED
-    STOPPED --> STARTING: 初始化上下文和文件
-    STARTING --> ACTIVE: 打开通道
-    ACTIVE --> QUIESCING: 收到停止请求
-    QUIESCING --> DRAINING: 通道close-ack
-    DRAINING --> SYNCING: RX和写队列清空
-    SYNCING --> STOPPED: DMA完成且文件关闭
-    ACTIVE --> ERROR: 通道或存储错误
-    ERROR --> QUIESCING: 受控停止
+```plantuml
+@startuml
+hide empty description
+skinparam shadowing false
+
+state "STOPPED" as STOPPED
+state "STARTING" as STARTING
+state "ACTIVE" as ACTIVE
+state "QUIESCING" as QUIESCING
+state "DRAINING" as DRAINING
+state "SYNCING" as SYNCING
+state "ERROR" as ERROR
+
+[*] --> STOPPED
+STOPPED --> STARTING : 初始化上下文和文件
+STARTING --> ACTIVE : 打开通道
+ACTIVE --> QUIESCING : 收到停止请求
+QUIESCING --> DRAINING : 通道close-ack
+DRAINING --> SYNCING : RX和写队列清空
+SYNCING --> STOPPED : DMA完成且文件关闭
+ACTIVE --> ERROR : 通道或存储错误
+ERROR --> QUIESCING : 受控停止
+@enduml
 ```
 
 停止时必须等待：
@@ -413,21 +466,22 @@ generation只能防止旧数据污染新会话，不能替代等待底层回调�
 
 ## 15. 三种业务端到端流程
 
-```mermaid
-sequenceDiagram
-    participant Driver as 核间Driver
-    participant Ring as 独立Channel Ring
-    participant Core as Core Worker
-    participant Store as Storage Owner
+```plantuml
+@startuml
+    participant "核间Driver" as Driver
+    participant "独立Channel Ring" as Ring
+    participant "Core Worker" as Core
+    participant "Storage Owner" as Store
 
-    Driver->>Ring: 写描述符并更新sequence
-    Driver->>Core: Notify bits
-    Core->>Ring: 按通道预算消费
-    Core->>Core: 解析/封装
-    Core->>Store: 写请求+generation+sequence
-    Store->>Store: 公平调度并写盘
-    Store-->>Core: 完成
-    Core->>Ring: 提交并释放所有权
+    Driver ->> Ring : 写描述符并更新sequence
+    Driver ->> Core : Notify bits
+    Core ->> Ring : 按通道预算消费
+    Core ->> Core : 解析/封装
+    Core ->> Store : 写请求+generation+sequence
+    Store ->> Store : 公平调度并写盘
+    Store -->> Core : 完成
+    Core ->> Ring : 提交并释放所有权
+@enduml
 ```
 
 ## 16. 修订后的推荐参数

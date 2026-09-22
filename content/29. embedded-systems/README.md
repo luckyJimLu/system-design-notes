@@ -2,6 +2,8 @@
 
 面向资源受限 MCU、RTOS、通信模组、网络栈与固件架构的专题资料。
 
+> 图表说明：本章流程图统一使用 `plantuml` 代码围栏。Obsidian 默认不渲染 PlantUML，请安装社区插件 [PlantUML](https://github.com/joethei/obsidian-plantuml)；中文图建议在插件中使用 SVG 渲染。
+
 ## 目录
 
 ### RTOS

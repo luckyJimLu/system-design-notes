@@ -18,23 +18,39 @@ This design uses C++ types and access control to express boundaries, and does no
 ## 2. Module and task mapping
 
 
-```mermaid
-flowchart TD
-    api["DiagnosticApi"] -->|"固定请求槽"| coordinator["SessionCoordinator"]
-    subgraph reactorTask["SocketReactor 任务"]
-        coordinator --> reactor["SocketReactor"]
-        reactor --> log["LogSession"]
-        reactor --> chr["ChrSession"]
-    end
-    log --> rings["Log 与 CHR 专用环"]
-    chr --> rings
-    hooks["已有 lwIP RX / TX 上下文"] --> tap["CaptureTap 与 CaptureGate"]
-    tap --> cap["独立 RX / TX 快照环"]
-    coordinator -->|"存储命令槽"| storage["StorageOwner 任务"]
-    rings --> storage
-    cap --> storage
-    storage --> files["FatFsPort 与三个文件会话"]
-    storage -.->|"保留至确认的结果槽"| coordinator
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "DiagnosticApi" as api
+package "SocketReactor 任务" as reactorTask {
+  rectangle "SessionCoordinator" as coordinator
+  rectangle "SocketReactor" as reactor
+  rectangle "LogSession" as log
+  rectangle "ChrSession" as chr
+}
+rectangle "Log 与 CHR 专用环" as rings
+rectangle "已有 lwIP RX / TX 上下文" as hooks
+rectangle "CaptureTap 与 CaptureGate" as tap
+rectangle "独立 RX / TX 快照环" as cap
+rectangle "StorageOwner 任务" as storage
+rectangle "FatFsPort 与三个文件会话" as files
+
+api --> coordinator : 固定请求槽
+coordinator --> reactor
+reactor --> log
+reactor --> chr
+log --> rings
+chr --> rings
+hooks --> tap
+tap --> cap
+coordinator --> storage : 存储命令槽
+rings --> storage
+cap --> storage
+storage --> files
+storage ..> coordinator : 保留至确认的结果槽
+@enduml
 ```
 
 
@@ -253,22 +269,23 @@ Network hooks are placed in a task context that can reliably read packets. If th
 ### 7.1 Prepare documents first before allowing production
 
 
-```mermaid
-sequenceDiagram
-    participant app as 应用
-    participant ctl as Coordinator及Reactor
-    participant disk as StorageOwner
-    participant source as Socket会话或CaptureGate
-    app->>ctl: 提交 Start 请求
-    ctl->>disk: PrepareFile 与 generation
-    disk-->>ctl: 保留完成结果
+```plantuml
+@startuml
+    participant "应用" as app
+    participant "Coordinator及Reactor" as ctl
+    participant "StorageOwner" as disk
+    participant "Socket会话或CaptureGate" as source
+    app ->> ctl : 提交 Start 请求
+    ctl ->> disk : PrepareFile 与 generation
+    disk -->> ctl : 保留完成结果
     alt 文件准备成功
-        ctl->>source: 非阻塞连接或启用快照
-        source-->>ctl: READY 或连接完成
-        ctl-->>app: 请求完成为 RUNNING
+        ctl ->> source : 非阻塞连接或启用快照
+        source -->> ctl : READY 或连接完成
+        ctl -->> app : 请求完成为 RUNNING
     else 文件准备失败
-        ctl-->>app: 请求完成为 FAULTED
+        ctl -->> app : 请求完成为 FAULTED
     end
+@enduml
 ```
 
 
@@ -285,18 +302,19 @@ Log high water level only stops the read interest of the fd; stopping reading wi
 ### 7.3 CHR: Return results by confirmation level
 
 
-```mermaid
-sequenceDiagram
-    participant modem as Modem CHR
-    participant rx as ChrSession及Reactor
-    participant ring as CHR专用环
-    participant disk as StorageOwner
-    modem->>rx: 有序消息字节流
-    rx->>ring: 完整记录或有界分段发布
-    ring->>disk: 按序消费
-    disk->>disk: 写入并按策略同步
-    disk-->>rx: 同步检查点与 generation
-    rx-->>modem: 协议允许时发送持久化 ACK
+```plantuml
+@startuml
+    participant "Modem CHR" as modem
+    participant "ChrSession及Reactor" as rx
+    participant "CHR专用环" as ring
+    participant "StorageOwner" as disk
+    modem ->> rx : 有序消息字节流
+    rx ->> ring : 完整记录或有界分段发布
+    ring ->> disk : 按序消费
+    disk ->> disk : 写入并按策略同步
+    disk -->> rx : 同步检查点与 generation
+    rx -->> modem : 协议允许时发送持久化 ACK
+@enduml
 ```
 
 
