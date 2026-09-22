@@ -28,18 +28,38 @@ lwIP (Lightweight IP) is purpose-built for resource-constrained microcontrollers
 
 ### NO_SYS=1: Bare-Metal / Main Loop Execution
 
-```text
-ISR -> driver queue/flag -> main loop -> netif->input()
-main loop -> sys_check_timeouts()
+```plantuml
+@startuml
+start
+:ISR;
+:driver queue / flag;
+:main loop;
+:netif->input();
+:sys_check_timeouts();
+stop
+@enduml
 ```
 
 In bare-metal mode, the primary super-loop polls hardware interfaces, passes received packets into the stack via `netif->input()`, and continuously advances software timers via `sys_check_timeouts()`. The event-driven Raw API is the primary application interface. Interrupt Service Routines (ISRs) must only perform rapid DMA buffer swapping, flag setting, or ring-buffer staging; complex protocol parsing inside ISRs is strictly forbidden.
 
 ### NO_SYS=0: RTOS / Multi-Threaded Model
 
-```text
-RX thread/ISR bottom-half -> tcpip_input() -> tcpip_mbox -> tcpip_thread
-app thread -> Netconn/Socket -> api_msg -> tcpip_mbox -> tcpip_thread
+```plantuml
+@startuml
+start
+fork
+  :RX thread / ISR bottom-half;
+  :tcpip_input();
+  :tcpip_mbox;
+fork again
+  :app thread;
+  :Netconn / Socket;
+  :api_msg;
+  :tcpip_mbox;
+end fork
+:tcpip_thread;
+stop
+@enduml
 ```
 
 In multi-threaded mode, `tcpip_thread` serves as the single serialized core execution context of the protocol stack. Raw API functions must execute exclusively within this core context. External application threads must enter the stack via `tcpip_callback()`, thread-safe messaging mailboxes (`api_msg`), or properly configured core locking primitives (`LOCK_TCPIP_CORE()`).
@@ -118,19 +138,38 @@ Administrative status (`netif_is_up`) and physical carrier status (`netif_is_lin
 
 ### Ethernet RX Data Path
 
-```text
-MAC/PHY -> DMA RX descriptor -> driver allocates/populates pbuf
--> tcpip_input(p, netif) -> tcpip_mbox -> tcpip_thread
--> ethernet_input() -> ARP / IP processing -> TCP / UDP / RAW
--> Application callback or Netconn / Socket wakeup
+```plantuml
+@startuml
+start
+:MAC / PHY;
+:DMA RX descriptor;
+:driver allocates / populates pbuf;
+:tcpip_input(p, netif);
+:tcpip_mbox;
+:tcpip_thread;
+:ethernet_input();
+:ARP / IP processing;
+:TCP / UDP / RAW;
+:Application callback or Netconn / Socket wakeup;
+stop
+@enduml
 ```
 
 ### Ethernet TX Data Path
 
-```text
-Application -> tcp_write / udp_send / send
--> IP output routing -> netif->output -> netif->linkoutput
--> Driver maps/copies pbuf chain -> DMA TX descriptor -> MAC/PHY
+```plantuml
+@startuml
+start
+:Application;
+:tcp_write / udp_send / send;
+:IP output routing;
+:netif->output;
+:netif->linkoutput;
+:Driver maps / copies pbuf chain;
+:DMA TX descriptor;
+:MAC / PHY;
+stop
+@enduml
 ```
 
 When diagnosing packet loss or throughput bottlenecks, systematically trace the pipeline: `Driver / PHY / DMA -> tcpip_input -> Ethernet / IP -> TCP / UDP -> Application Callback`. If no packets arrive, inspect hardware clocks, DMA descriptors, CRC errors, and ring buffer overruns. If packets arrive at the driver but the stack does not reply, inspect netif flags, hardware checksum offloading, ARP tables, and memory pool quotas.
@@ -170,10 +209,27 @@ Socket APIs layer on top of Netconn, introducing extra file descriptors, event q
   2. Transition to PPP data mode routes the raw UART byte stream to `pppos_input()`.
   3. The PPP finite state machine completes LCP/PAP/CHAP and IPCP/IPv6CP negotiation, registering a fully functional `netif` with lwIP.
 
-```text
-AT command mode -> dial / CONNECT -> PPP data mode
-UART RX -> pppos_input[_tcpip]() -> PPP FSM -> IPCP / IPv6CP -> netif -> IP stack
-IP output -> PPP framing -> UART TX -> Cellular Modem
+```plantuml
+@startuml
+start
+:AT command mode;
+:dial / CONNECT;
+:PPP data mode;
+fork
+  :UART RX;
+  :pppos_input[_tcpip]();
+  :PPP FSM;
+  :IPCP / IPv6CP;
+  :netif;
+  :IP stack;
+fork again
+  :IP output;
+  :PPP framing;
+  :UART TX;
+  :Cellular Modem;
+end fork
+stop
+@enduml
 ```
 
 AT control commands and PPP frame data must be managed by an explicit, deterministic state machine; sending AT strings and PPP frames concurrently to the same parser causes immediate link failure.

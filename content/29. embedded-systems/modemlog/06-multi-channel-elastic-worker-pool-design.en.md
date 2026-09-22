@@ -22,19 +22,34 @@ Threads cannot be the carrier of business continuity.
 Recommended structure:
 
 
-```mermaid
-flowchart TD
-    D["核间驱动 / ISR / DMA"] --> C1["ModemLog通道"]
-    D --> C2["TCPDump通道"]
-    D --> C3["CHR通道"]
-    C1 --> R1["ModemLog RX Ring"]
-    C2 --> R2["TCPDump RX Ring"]
-    C3 --> R3["CHR RX Ring"]
-    R1 --> P["共享弹性工作池"]
-    R2 --> P
-    R3 --> P
-    P --> S["唯一Storage Owner"]
-    S --> F["三个独立文件"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "核间驱动 / ISR / DMA" as D
+rectangle "ModemLog通道" as C1
+rectangle "TCPDump通道" as C2
+rectangle "CHR通道" as C3
+rectangle "ModemLog RX Ring" as R1
+rectangle "TCPDump RX Ring" as R2
+rectangle "CHR RX Ring" as R3
+rectangle "共享弹性工作池" as P
+rectangle "唯一Storage Owner" as S
+rectangle "三个独立文件" as F
+
+D --> C1
+D --> C2
+D --> C3
+C1 --> R1
+C2 --> R2
+C3 --> R3
+R1 --> P
+R2 --> P
+R3 --> P
+P --> S
+S --> F
+@enduml
 ```
 
 
@@ -143,13 +158,25 @@ Processing process:
 If the three services write to the same SD card/FatFs, only one Storage Owner will be retained:
 
 
-```mermaid
-flowchart LR
-    M["ModemLog写请求"] --> Q["Storage调度器"]
-    T["TCPDump写请求"] --> Q
-    C["CHR写请求"] --> Q
-    Q --> W["唯一Storage Owner"]
-    W --> SD["FatFs / SDMMC"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+left to right direction
+
+rectangle "ModemLog写请求" as M
+rectangle "Storage调度器" as Q
+rectangle "TCPDump写请求" as T
+rectangle "CHR写请求" as C
+rectangle "唯一Storage Owner" as W
+rectangle "FatFs / SDMMC" as SD
+
+M --> Q
+T --> Q
+C --> Q
+Q --> W
+W --> SD
+@enduml
 ```
 
 
@@ -421,16 +448,27 @@ In FreeRTOS, the kernel dynamic memory of a deleted task is reclaimed by the Idl
 ## 12. Business life cycle
 
 
-```mermaid
-stateDiagram-v2
-    [*] --> STOPPED
-    STOPPED --> STARTING: start
-    STARTING --> ACTIVE: 通道和文件就绪
-    ACTIVE --> QUIESCING: stop
-    QUIESCING --> DRAINING: 停止新输入
-    DRAINING --> STOPPED: 排空并同步
-    ACTIVE --> ERROR: 通道或存储错误
-    ERROR --> DRAINING: 受控停止
+```plantuml
+@startuml
+hide empty description
+skinparam shadowing false
+
+state "STOPPED" as STOPPED
+state "STARTING" as STARTING
+state "ACTIVE" as ACTIVE
+state "QUIESCING" as QUIESCING
+state "DRAINING" as DRAINING
+state "ERROR" as ERROR
+
+[*] --> STOPPED
+STOPPED --> STARTING : start
+STARTING --> ACTIVE : 通道和文件就绪
+ACTIVE --> QUIESCING : stop
+QUIESCING --> DRAINING : 停止新输入
+DRAINING --> STOPPED : 排空并同步
+ACTIVE --> ERROR : 通道或存储错误
+ERROR --> DRAINING : 受控停止
+@enduml
 ```
 
 

@@ -34,21 +34,39 @@ C++落地请结合[C++整体架构与交互契约](02-cpp-architecture-and-inter
 
 ## 3. 端到端架构
 
-```mermaid
-flowchart TD
-    modemLog["Modem 日志服务"] --> logSocket["MCU ModemLog Socket"]
-    modemChr["Modem CHR服务"] --> chrSocket["MCU CHR Socket"]
-    logSocket --> reactor["Socket Reactor"]
-    chrSocket --> reactor
-    reactor --> logRing["ModemLog 专用块环"]
-    reactor --> chrRing["CHR 专用消息块环"]
-    net["正常 lwIP RX / TX"] --> tap["有界只读 Capture Tap"]
-    tap --> normal["原始业务路径继续"]
-    tap -.->|"尽力复制"| cap["私有 RX / TX 抓包环"]
-    logRing --> storage["唯一 Storage Owner"]
-    chrRing --> storage
-    cap --> storage
-    storage --> files["日志文件、CHR文件、PCAP文件"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "Modem 日志服务" as modemLog
+rectangle "MCU ModemLog Socket" as logSocket
+rectangle "Modem CHR服务" as modemChr
+rectangle "MCU CHR Socket" as chrSocket
+rectangle "Socket Reactor" as reactor
+rectangle "ModemLog 专用块环" as logRing
+rectangle "CHR 专用消息块环" as chrRing
+rectangle "正常 lwIP RX / TX" as net
+rectangle "有界只读 Capture Tap" as tap
+rectangle "原始业务路径继续" as normal
+rectangle "私有 RX / TX 抓包环" as cap
+rectangle "唯一 Storage Owner" as storage
+rectangle "日志文件、CHR文件、PCAP文件" as files
+
+modemLog --> logSocket
+modemChr --> chrSocket
+logSocket --> reactor
+chrSocket --> reactor
+reactor --> logRing
+reactor --> chrRing
+net --> tap
+tap --> normal
+tap ..> cap : 尽力复制
+logRing --> storage
+chrRing --> storage
+cap --> storage
+storage --> files
+@enduml
 ```
 
 实线表示数据处理路径；抓包虚线只复制独立副本，不转移原包所有权。网络接收必须继续走原来的 netif input/tcpip_input，不能把 TCP 包直接当作 Socket 日志字节写盘。lwIP 在有操作系统配置下有自己的核心线程和 API 线程约束。[^1][^5]
@@ -72,16 +90,29 @@ flowchart TD
 
 推荐一次循环先处理停止/控制命令，再给CHR和ModemLog分别一个有限读取预算。CHR优先只是默认策略，不等于CHR已被确认是最高重要级别。每轮设置最大总字节数、最大循环次数和CPU时间；必要时主动阻塞一个tick。单核上 taskYIELD 不能保证更低优先级任务获得CPU。
 
-```mermaid
-flowchart TD
-    control["处理控制与停止请求"] --> sets["按空闲配额重建 fd集合"]
-    sets --> wait["select 有限超时"]
-    wait --> chr["CHR 就绪则有限读取"]
-    chr --> log["ModemLog 就绪则有限读取"]
-    log --> parse["保存分帧状态并发布块"]
-    parse --> notify["通知 Storage"]
-    notify --> budget["检查CPU预算和停止状态"]
-    budget --> control
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "处理控制与停止请求" as control
+rectangle "按空闲配额重建 fd集合" as sets
+rectangle "select 有限超时" as wait
+rectangle "CHR 就绪则有限读取" as chr
+rectangle "ModemLog 就绪则有限读取" as log
+rectangle "保存分帧状态并发布块" as parse
+rectangle "通知 Storage" as notify
+rectangle "检查CPU预算和停止状态" as budget
+
+control --> sets
+sets --> wait
+wait --> chr
+chr --> log
+log --> parse
+parse --> notify
+notify --> budget
+budget --> control
+@enduml
 ```
 
 接口草图如下，辅助函数需在工程中实现并验证；不是可直接编译的完整程序。
@@ -170,21 +201,36 @@ lwIP源码明确提示，RX池耗尽可导致TCP ACK收不到。把RX pbuf或其
 
 ### 6.2 热路径顺序
 
-```mermaid
-flowchart TD
-    packet["原包到达观察点"] --> enabled{"启用且在范围内？"}
-    enabled -->|"否"| pass["原路径继续"]
-    enabled -->|"是"| budget{"过滤及包率字节预算通过？"}
-    budget -->|"否"| pass
-    budget -->|"是"| slot{"立即取得私有槽？"}
-    slot -->|"否"| drop["仅增加抓包drop"]
-    slot -->|"是"| copy["限长限链段只读复制"]
-    copy --> valid{"快照完整？"}
-    valid -->|"否"| discard["归还未发布槽并记drop"]
-    valid -->|"是"| publish["release发布槽并通知Storage"]
-    drop --> pass
-    discard --> pass
-    publish --> pass
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "原包到达观察点" as packet
+diamond "启用且在范围内？" as enabled
+rectangle "原路径继续" as pass
+diamond "过滤及包率字节预算通过？" as budget
+diamond "立即取得私有槽？" as slot
+rectangle "仅增加抓包drop" as drop
+rectangle "限长限链段只读复制" as copy
+diamond "快照完整？" as valid
+rectangle "归还未发布槽并记drop" as discard
+rectangle "release发布槽并通知Storage" as publish
+
+packet --> enabled
+enabled --> pass : 否
+enabled --> budget : 是
+budget --> pass : 否
+budget --> slot : 是
+slot --> drop : 否
+slot --> copy : 是
+copy --> valid
+valid --> discard : 否
+valid --> publish : 是
+drop --> pass
+discard --> pass
+publish --> pass
+@enduml
 ```
 
 包率预算和字节预算缺一不可。初始先做接口/方向/协议等短过滤；解析IPv4可变头、IPv6扩展头、分片和VLAN时都有长度检查与层数上限。无法确定端口的分片/超长头按配置明确收或丢快照，不越界猜测。默认关闭全量promiscuous mode，避免为了诊断扩大正常RX负载。
@@ -236,16 +282,26 @@ Reactor直接把Log/CHR写进对应生产槽；tap直接填capture槽；Storage�
 
 Storage可以把抓包记录批量序列化到自己独占的8 KiB staging区。复制到staging后即可归还capture槽，但staging在写请求结束前不能复用。如果失败，仍能明确区分“原槽已经归还、记录还在staging”和“记录已经丢弃”，避免双释放；无需为每个文件配置独立大staging。
 
-```mermaid
-stateDiagram-v2
-    [*] --> FREE
-    FREE --> FILLING: 唯一生产者预约
-    FILLING --> READY: release发布
-    FILLING --> FREE: 取消未发布快照
-    READY --> READING: Storage acquire取得
-    READING --> FREE: 同步消费完成或复制至Storage私有区
-    READING --> ERROR_HELD: IO失败且所有权尚未解除
-    ERROR_HELD --> FREE: 确认DMA停止后显式清理
+```plantuml
+@startuml
+hide empty description
+skinparam shadowing false
+
+state "FREE" as FREE
+state "FILLING" as FILLING
+state "READY" as READY
+state "READING" as READING
+state "ERROR_HELD" as ERROR_HELD
+
+[*] --> FREE
+FREE --> FILLING : 唯一生产者预约
+FILLING --> READY : release发布
+FILLING --> FREE : 取消未发布快照
+READY --> READING : Storage acquire取得
+READING --> FREE : 同步消费完成或复制至Storage私有区
+READING --> ERROR_HELD : IO失败且所有权尚未解除
+ERROR_HELD --> FREE : 确认DMA停止后显式清理
+@enduml
 ```
 
 State图表达所有权，不要求每槽都存一套冗余状态字段。SPSC可使用单调无符号索引，N为2的幂，used=write_seq-read_seq，保持0<=used<=N且N远小于2^31。半填块未发布时消费者不可见；小量日志需设置填充截止时间，不能为了凑4KiB无限延迟。
@@ -282,16 +338,31 @@ Socket、业务通道、netif和物理IPC lane是四种不同对象，不能一�
 
 MCU通常复用一个lwIP栈：WAN为默认接口，IPC为独立不冲突子网。跨核Socket需要对端兼容协议栈和IP承载；netif本身不要求真实以太网MAC，可在共享内存/SPI等承载raw-IP。Modem公网实现可能是路由/NAT，也可能是IP透传/PPP，原文的wan-lan0加NAT仅是一个可选拓扑；上游lwIP不应被假定已经提供产品级NAT。
 
-```mermaid
-flowchart TD
-    diag["两个诊断 Socket"] --> ipc["IPC 地址域"]
-    app["公网应用 Socket"] --> wan["WAN 默认接口"]
-    ipc --> guardI["IPC 出口地址与链路校验"]
-    wan --> guardW["WAN 出口拒绝 IPC 源和目的"]
-    guardI --> local["Modem 本地诊断端点"]
-    guardW --> modemWan["Modem 公网透传或路由"]
-    modemWan --> cell["蜂窝网络"]
-    wan -.->|"只读快照"| capture["MCU 本地 TCPDump"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "两个诊断 Socket" as diag
+rectangle "IPC 地址域" as ipc
+rectangle "公网应用 Socket" as app
+rectangle "WAN 默认接口" as wan
+rectangle "IPC 出口地址与链路校验" as guardI
+rectangle "WAN 出口拒绝 IPC 源和目的" as guardW
+rectangle "Modem 本地诊断端点" as local
+rectangle "Modem 公网透传或路由" as modemWan
+rectangle "蜂窝网络" as cell
+rectangle "MCU 本地 TCPDump" as capture
+
+diag --> ipc
+app --> wan
+ipc --> guardI
+wan --> guardW
+guardI --> local
+guardW --> modemWan
+modemWan --> cell
+wan ..> capture : 只读快照
+@enduml
 ```
 
 安全基线：固定且独立于netif当前IP的IPC地址范围；两端IPC服务绑定指定本地地址；WAN发送/接收边界禁止IPC源或目的；IPC边界仅允许合法peer与本地地址；MCU不承担转发时关闭IP_FORWARD。IPv6启用时必须有对应策略，不能只修IPv4便声称隔离完成。
@@ -365,20 +436,21 @@ Start：Storage准备文件和资源；初始化独立会话generation、计数�
 
 Stop分两条路径：Socket业务停止源端并在截止时间内继续读尾部/ACK，再由Owner关闭；Capture仅关闭快照admission，**不关闭WAN netif**，等待已经进入的tap退出，然后排空私有槽。generation用于识别会话，不替代回调退出同步；旧代对象仍按原owner归还，不能因为“generation不匹配”就泄漏缓冲。
 
-```mermaid
-sequenceDiagram
-    participant manager as 会话管理
-    participant producer as Reactor或Capture入口
-    participant storage as Storage Owner
-    participant disk as SD驱动
-    manager->>producer: 停止指定业务输入
-    producer->>producer: 禁止新进入并等待在途完成
-    producer-->>manager: 输入已静默
-    manager->>storage: 排空该业务并关闭文件
-    storage->>disk: 完成写入和同步
-    disk-->>storage: 成功或有界故障
-    storage-->>manager: 结果与资源清理确认
-    manager->>manager: 标记STOPPED或FAULTED
+```plantuml
+@startuml
+    participant "会话管理" as manager
+    participant "Reactor或Capture入口" as producer
+    participant "Storage Owner" as storage
+    participant "SD驱动" as disk
+    manager ->> producer : 停止指定业务输入
+    producer ->> producer : 禁止新进入并等待在途完成
+    producer -->> manager : 输入已静默
+    manager ->> storage : 排空该业务并关闭文件
+    storage ->> disk : 完成写入和同步
+    disk -->> storage : 成功或有界故障
+    storage -->> manager : 结果与资源清理确认
+    manager ->> manager : 标记STOPPED或FAULTED
+@enduml
 ```
 
 等待close-ack、队列排空、DMA abort和sync各有上限；超时进入FAULTED，不无限占着全局管理锁。业务停止不等于已删除执行任务，其余业务继续运行。

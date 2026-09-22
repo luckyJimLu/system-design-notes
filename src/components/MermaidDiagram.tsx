@@ -71,6 +71,10 @@ function prepareSvg(svgSource: string, titleId: string, descId: string, language
   svg.setAttribute('width', '100%');
   svg.setAttribute('height', '100%');
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  // Mermaid's generated SVG can contain labels outside the node geometry.
+  // Keep the root overflow visible so a browser does not clip those labels
+  // after the SVG is placed in a scrollable stage.
+  svg.setAttribute('overflow', 'visible');
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-labelledby', `${titleId} ${descId}`);
 
@@ -545,9 +549,12 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
                   <div
                     className="mermaid-inline-stage shrink-0 transition-[width] duration-150"
                     style={{
-                      width: `min(${scale * 100}%, ${Math.ceil(diagramSize.width * scale)}px)`,
-                      minWidth: diagramSize.width >= 560 ? 'min(640px, 180vw)' : undefined,
-                      aspectRatio: `${diagramSize.width} / ${diagramSize.height}`,
+                      // Preserve the diagram's working width. Shrinking a
+                      // 2,000px flowchart to the reading column makes labels
+                      // appear clipped or unreadable; the viewport already
+                      // provides horizontal scrolling for wide diagrams.
+                      width: `max(100%, ${Math.ceil(diagramSize.width * scale)}px)`,
+                      height: `max(100%, ${Math.ceil(diagramSize.height * scale)}px)`,
                     }}
                   >
                     <RenderedSvg svgHtml={svgHtml} className="h-full w-full" />
@@ -659,8 +666,8 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
             <div
               className="mermaid-fullscreen-stage flex items-center justify-center p-4 sm:p-8"
               style={{
-                width: `${scale * 100}%`,
-                height: `${scale * 100}%`,
+                width: `max(100%, ${Math.ceil(diagramSize.width * scale)}px)`,
+                height: `max(100%, ${Math.ceil(diagramSize.height * scale)}px)`,
                 minWidth: '100%',
                 minHeight: '100%',
               }}

@@ -112,17 +112,37 @@ Solution principles:
 When multiple tasks acquire multiple resources at the same time, a unified lock sequence must be defined, for example:
 
 
-```text
-Storage -> Bus -> Device
+```plantuml
+@startuml
+skinparam shadowing false
+
+start
+:Storage;
+:Bus;
+:Device;
+stop
+@enduml
 ```
 
 
 Prohibited:
 
 
-```text
-Task A: lock Bus -> lock Device
-Task B: lock Device -> lock Bus
+```plantuml
+@startuml
+skinparam shadowing false
+
+start
+partition "Task A" {
+  :lock Bus;
+  :lock Device;
+}
+partition "Task B" {
+  :lock Device;
+  :lock Bus;
+}
+stop
+@enduml
 ```
 
 
@@ -170,12 +190,23 @@ Execution in an ISR should be avoided:
 
 Recommended model:
 
-```mermaid
-flowchart LR
-    irq([Hardware IRQ]) --> topHalf["Top-Half ISR\n(Fast Sampling / Clear IRQ Flags)"]
-    topHalf --> ipc{"Lightweight IPC Decoupling\n(Ring Buffer / Task Notification)"}
-    ipc --> bottomHalf["Bottom-Half Worker Task / State Machine\n(Full Protocol Parsing / State Transition)"]
-    bottomHalf --> biz([Business Logic Execution])
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+left to right direction
+
+rectangle "Hardware IRQ" as irq
+rectangle "Top-Half ISR\n(Fast Sampling / Clear IRQ Flags)" as topHalf
+diamond "Lightweight IPC Decoupling\n(Ring Buffer / Task Notification)" as ipc
+rectangle "Bottom-Half Worker Task / State Machine\n(Full Protocol Parsing / State Transition)" as bottomHalf
+rectangle "Business Logic Execution" as biz
+
+irq --> topHalf
+topHalf --> ipc
+ipc --> bottomHalf
+bottomHalf --> biz
+@enduml
 ```
 
 ### 4.2 The length of the critical section determines the lower limit of interrupt response
@@ -212,14 +243,28 @@ Even if each task stack is adequate, an MSP that is too small may still be overw
 
 Not recommended:
 
-```text
-SysTick ISR -> Feed Watchdog
+```plantuml
+@startuml
+skinparam shadowing false
+
+start
+:SysTick ISR;
+:Feed Watchdog;
+stop
+@enduml
 ```
 
 It is also not recommended to simply:
 
-```text
-Idle Task -> Feed Watchdog
+```plantuml
+@startuml
+skinparam shadowing false
+
+start
+:Idle Task;
+:Feed Watchdog;
+stop
+@enduml
 ```
 
 The reason is that the business thread may be deadlocked, but SysTick or Idle still continues to run, and the watchdog will be refreshed with "false health".
@@ -228,19 +273,36 @@ The reason is that the business thread may be deadlocked, but SysTick or Idle st
 
 Typical Tickless process:
 
-```mermaid
-flowchart TD
-    start([Enter Idle Task]) --> calc["Calculate Next Task Wakeup Time\n(Next Wakeup Tick)"]
-    calc --> checkMin{"Sleep Duration\n> Minimum Threshold?"}
-    checkMin -->|No| normalIdle["Standard Light Sleep WFI\nKeep SysTick Running"]
-    checkMin -->|Yes| cfgTimer["Configure Low-Power Timer (LPTIM)"]
-    cfgTimer --> stopTick["Stop / Mask Standard SysTick"]
-    stopTick --> raceCheck{"Atomic Check: Any New Interrupt/Task\nBecame Ready During Setup?"}
-    raceCheck -->|Task Ready| abortSleep["Abort Sleep Immediately\nRestore SysTick Scheduling"]
-    raceCheck -->|Safe| enterWFI["Execute WFI / WFE (Deep Sleep)"]
-    enterWFI --> wakeup([Hardware Interrupt Wakeup])
-    wakeup --> compTime["Compensate OS Ticks from LPTIM Count"]
-    compTime --> resumeOS["Restore OS Scheduler & Peripheral Clocks"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "Enter Idle Task" as start
+rectangle "Calculate Next Task Wakeup Time\n(Next Wakeup Tick)" as calc
+diamond "Sleep Duration\n> Minimum Threshold?" as checkMin
+rectangle "Standard Light Sleep WFI\nKeep SysTick Running" as normalIdle
+rectangle "Configure Low-Power Timer (LPTIM)" as cfgTimer
+rectangle "Stop / Mask Standard SysTick" as stopTick
+diamond "Atomic Check: Any New Interrupt/Task\nBecame Ready During Setup?" as raceCheck
+rectangle "Abort Sleep Immediately\nRestore SysTick Scheduling" as abortSleep
+rectangle "Execute WFI / WFE (Deep Sleep)" as enterWFI
+rectangle "Hardware Interrupt Wakeup" as wakeup
+rectangle "Compensate OS Ticks from LPTIM Count" as compTime
+rectangle "Restore OS Scheduler & Peripheral Clocks" as resumeOS
+
+start --> calc
+calc --> checkMin
+checkMin --> normalIdle : No
+checkMin --> cfgTimer : Yes
+cfgTimer --> stopTick
+stopTick --> raceCheck
+raceCheck --> abortSleep : Task Ready
+raceCheck --> enterWFI : Safe
+enterWFI --> wakeup
+wakeup --> compTime
+compTime --> resumeOS
+@enduml
 ```
 
 If an asynchronous event occurs between "computation complete" and the actual execution of `WFI`, and a high-priority task is ready, you need to ensure that the kernel does not enter deep sleep by mistake.
@@ -260,12 +322,22 @@ Therefore, the low-power entrance must have:
 
 Recommended layering:
 
-```mermaid
-flowchart TD
-    app["Application Layer"] -->|"High-level Logic"| domain["Domain / Service Layer"]
-    domain -->|"Abstract Device Contract"| drv["Driver Interface Layer"]
-    drv -->|"Zero-cost Inlines / Static Config"| hal["HAL / BSP"]
-    hal -->|"Direct Reads/Writes"| mmio["MMIO / Hardware Registers"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "Application Layer" as app
+rectangle "Domain / Service Layer" as domain
+rectangle "Driver Interface Layer" as drv
+rectangle "HAL / BSP" as hal
+rectangle "MMIO / Hardware Registers" as mmio
+
+app --> domain : High-level Logic
+domain --> drv : Abstract Device Contract
+drv --> hal : Zero-cost Inlines / Static Config
+hal --> mmio : Direct Reads/Writes
+@enduml
 ```
 
 For extreme resource MCUs, deep runtime dynamic dispatch should be avoided as much as possible. Can use:
@@ -282,19 +354,33 @@ The goal is to have the abstraction removed at compile time so that the final in
 
 Architecture comparison:
 
-```mermaid
-flowchart TD
-    subgraph TRAD["Traditional Model (Heavy SRAM Waste)"]
-        m1["Module A"] --> tA["Task A + Dedicated Stack A"]
-        m2["Module B"] --> tB["Task B + Dedicated Stack B"]
-        m3["Module C"] --> tC["Task C + Dedicated Stack C"]
-    end
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
 
-    subgraph AO["Active Object Pattern (Minimal SRAM Footprint)"]
-        events["Unified Event Queue"] --> aoTask["Single Active Object Task (Shared Stack)"]
-        aoTask --> hsm["Hierarchical State Machine (HSM)"]
-        hsm --> rtc["Run-to-Completion Fast Dispatch"]
-    end
+package "Traditional Model (Heavy SRAM Waste)" as TRAD {
+  rectangle "Module A" as m1
+  rectangle "Task A + Dedicated Stack A" as tA
+  rectangle "Module B" as m2
+  rectangle "Task B + Dedicated Stack B" as tB
+  rectangle "Module C" as m3
+  rectangle "Task C + Dedicated Stack C" as tC
+}
+package "Active Object Pattern (Minimal SRAM Footprint)" as AO {
+  rectangle "Unified Event Queue" as events
+  rectangle "Single Active Object Task (Shared Stack)" as aoTask
+  rectangle "Hierarchical State Machine (HSM)" as hsm
+  rectangle "Run-to-Completion Fast Dispatch" as rtc
+}
+
+m1 --> tA
+m2 --> tB
+m3 --> tC
+events --> aoTask
+aoTask --> hsm
+hsm --> rtc
+@enduml
 ```
 
 Core principles:
@@ -342,11 +428,20 @@ Avoid runtime division/modulo overhead.
 
 The key principles are:
 
-```mermaid
-flowchart TD
-    wData["1. Write Data to ring_buffer->data[head]"] --> dmb["2. Execute Memory Barrier (__DMB() / Compiler Barrier)"]
-    dmb --> pubHead["3. Publish Head Pointer: ring_buffer->head = next"]
-    pubHead --> notify["4. Notify / Wake Consumer Task"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "1. Write Data to ring_buffer->data[head]" as wData
+rectangle "2. Execute Memory Barrier (__DMB() / Compiler Barrier)" as dmb
+rectangle "3. Publish Head Pointer: ring_buffer->head = next" as pubHead
+rectangle "4. Notify / Wake Consumer Task" as notify
+
+wData --> dmb
+dmb --> pubHead
+pubHead --> notify
+@enduml
 ```
 
 
@@ -369,8 +464,15 @@ In the ARM CMSIS environment, appropriate memory barriers (such as `__DMB()`) ca
 If the communication relationship is:
 
 
-```text
-ISR/Task A  --->  单一 Task B
+```plantuml
+@startuml
+skinparam shadowing false
+
+start
+:ISR/Task A;
+:单一 Task B;
+stop
+@enduml
 ```
 
 
@@ -565,23 +667,38 @@ If the MCU has an MPU, a Guard Region can be deployed at the boundary of the tas
 
 ### 12.1 Architecture
 
-```mermaid
-flowchart TD
-    subgraph TASKS["Task Heartbeats (Independent Bits)"]
-        tA["Task A (Business Loop)"] -->|"Atomic set BIT0"| reg[("Heartbeat Bitmap Register")]
-        tB["Task B (Protocol Worker)"] -->|"Atomic set BIT1"| reg
-        tC["Task C (Sensor Sampler)"] -->|"Atomic set BIT2"| reg
-    end
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
 
-    reg --> supervisor["Watchdog Supervisor Task"]
-    supervisor --> check{"All Critical Task Bits\nHealthy & Present?"}
+package "Task Heartbeats (Independent Bits)" as TASKS {
+  rectangle "Task A (Business Loop)" as tA
+  database "Heartbeat Bitmap Register" as reg
+  rectangle "Task B (Protocol Worker)" as tB
+  rectangle "Task C (Sensor Sampler)" as tC
+}
+rectangle "Watchdog Supervisor Task" as supervisor
+diamond "All Critical Task Bits\nHealthy & Present?" as check
+rectangle "Feed Hardware Watchdog" as feed
+rectangle "Atomic Clear Heartbeat Bitmap" as clear
+rectangle "Next Supervision Period" as nextPeriod
+rectangle "Refuse to Feed Watchdog" as refuse
+rectangle "Preserve Minimal Crash Context to Backup RAM" as faultSave
+rectangle "Hardware Watchdog Timeout -> Chip Reset" as hwReset
 
-    check -->|"Yes (All Healthy)"| feed["Feed Hardware Watchdog"]
-    feed --> clear["Atomic Clear Heartbeat Bitmap"] --> nextPeriod["Next Supervision Period"]
-
-    check -->|"No (Deadlock / Starvation)"| refuse["Refuse to Feed Watchdog"]
-    refuse --> faultSave["Preserve Minimal Crash Context to Backup RAM"]
-    faultSave --> hwReset(["Hardware Watchdog Timeout -> Chip Reset"])
+tA --> reg : Atomic set BIT0
+tB --> reg : Atomic set BIT1
+tC --> reg : Atomic set BIT2
+reg --> supervisor
+supervisor --> check
+check --> feed : Yes (All Healthy)
+feed --> clear
+clear --> nextPeriod
+check --> refuse : No (Deadlock / Starvation)
+refuse --> faultSave
+faultSave --> hwReset
+@enduml
 ```
 
 
@@ -659,32 +776,32 @@ Suggestions:
 
 ## 14. Recommended system-level lightweight architecture
 
-```mermaid
-flowchart TD
-    subgraph L1["Application Layer"]
-        app["HSM / Active Objects / Domain State Machines\n(Run-to-Completion, Non-blocking)"]
-    end
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
 
-    subgraph L2["Event & Service Layer"]
-        events["Task Notification | Event Queue | Timer Events"]
-    end
+package "Application Layer" as L1 {
+  rectangle "HSM / Active Objects / Domain State Machines\n(Run-to-Completion, Non-blocking)" as app
+}
+package "Event & Service Layer" as L2 {
+  rectangle "Task Notification | Event Queue | Timer Events" as events
+}
+package "Minimal RTOS Worker Tasks" as L3 {
+  rectangle "Control Task | I/O Task | Protocol/Storage Task | Supervisor" as workers
+}
+package "Driver / HAL / BSP" as L4 {
+  rectangle "UART | SPI | I2C | ADC | DMA | Flash | WDG" as drivers
+}
+package "Hardware Layer" as L5 {
+  rectangle "MCU Peripherals / Physical Pins / NVIC" as hw
+}
 
-    subgraph L3["Minimal RTOS Worker Tasks"]
-        workers["Control Task | I/O Task | Protocol/Storage Task | Supervisor"]
-    end
-
-    subgraph L4["Driver / HAL / BSP"]
-        drivers["UART | SPI | I2C | ADC | DMA | Flash | WDG"]
-    end
-
-    subgraph L5["Hardware Layer"]
-        hw["MCU Peripherals / Physical Pins / NVIC"]
-    end
-
-    app -->|"Dispatch Events"| events
-    events -->|"Async Wakeup"| workers
-    workers -->|"Non-blocking / DMA"| drivers
-    drivers -->|"Direct Register MMIO"| hw
+app --> events : Dispatch Events
+events --> workers : Async Wakeup
+workers --> drivers : Non-blocking / DMA
+drivers --> hw : Direct Register MMIO
+@enduml
 ```
 
 
@@ -761,11 +878,20 @@ Threads are not module boundaries. There can be many modules, but RTOS tasks sho
 
 Priority suggestions:
 
-```mermaid
-flowchart TD
-    p1["1. Task Notification\n(Lightest: Zero RAM control block, directly uses TCB)"] -->|Needs Data Buffering| p2["2. SPSC Ring Buffer\n(Lock-free single-producer single-consumer, minimal overhead)"]
-    p2 -->|Needs Multi-Producer/Consumer| p3["3. OS Queue / Semaphore\n(Requires wait-lists & scheduler context switches)"]
-    p3 -->|Avoid When Possible| p4["4. Complex Shared Mutexes / Locks\n(Requires priority inheritance & strict ordering, lowest priority)"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "1. Task Notification\n(Lightest: Zero RAM control block, directly uses TCB)" as p1
+rectangle "2. SPSC Ring Buffer\n(Lock-free single-producer single-consumer, minimal overhead)" as p2
+rectangle "3. OS Queue / Semaphore\n(Requires wait-lists & scheduler context switches)" as p3
+rectangle "4. Complex Shared Mutexes / Locks\n(Requires priority inheritance & strict ordering, lowest priority)" as p4
+
+p1 --> p2 : Needs Data Buffering
+p2 --> p3 : Needs Multi-Producer/Consumer
+p3 --> p4 : Avoid When Possible
+@enduml
 ```
 
 The premise is that the communication semantics do match, and correctness cannot be sacrificed for the sake of "lightweight".
@@ -800,17 +926,32 @@ The final basis for judgment is not "theoretically lighter", but:
 
 ## 17. Recommended verification process
 
-```mermaid
-flowchart TD
-    s1["1. Define MCU Resource Budget\n(ROM / RAM / Stack / ISR Latency Limits)"] --> s2["2. Static Design\n(Task Partitioning / Buffer Sizing / IPC Selection)"]
-    s2 --> s3["3. Compilation & Analysis\n(Generate ELF + .map + .su Static Call Graph)"]
-    s3 --> s4["4. Static Resource Audit\n(Flash/RAM Utilization & Worst-Case Stack)"]
-    s4 --> s5["5. Real-Time Instrumentation\n(GPIO/Trace Measurement of ISR / WCET / Latency)"]
-    s5 --> s6["6. Stress & Peak Load Testing\n(Sustained Maximum Throughput Stability)"]
-    s6 --> s7["7. Fault Injection Matrix\n(Task Hang / Deadlock / Ring Overflow / Stack Pressure / Burst DMA)"]
-    s7 --> s8["8. Disaster Recovery Verification\n(Watchdog Action & Backup RAM Context Capture)"]
-    s8 --> s9["9. Low Power & Timing Verification\n(Tickless Wakeup Timing & Race Window Guards)"]
-    s9 --> s10["10. Freeze Production Config\n(Disable Debug Hooks & Lock Down Partitions)"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "1. Define MCU Resource Budget\n(ROM / RAM / Stack / ISR Latency Limits)" as s1
+rectangle "2. Static Design\n(Task Partitioning / Buffer Sizing / IPC Selection)" as s2
+rectangle "3. Compilation & Analysis\n(Generate ELF + .map + .su Static Call Graph)" as s3
+rectangle "4. Static Resource Audit\n(Flash/RAM Utilization & Worst-Case Stack)" as s4
+rectangle "5. Real-Time Instrumentation\n(GPIO/Trace Measurement of ISR / WCET / Latency)" as s5
+rectangle "6. Stress & Peak Load Testing\n(Sustained Maximum Throughput Stability)" as s6
+rectangle "7. Fault Injection Matrix\n(Task Hang / Deadlock / Ring Overflow / Stack Pressure / Burst DMA)" as s7
+rectangle "8. Disaster Recovery Verification\n(Watchdog Action & Backup RAM Context Capture)" as s8
+rectangle "9. Low Power & Timing Verification\n(Tickless Wakeup Timing & Race Window Guards)" as s9
+rectangle "10. Freeze Production Config\n(Disable Debug Hooks & Lock Down Partitions)" as s10
+
+s1 --> s2
+s2 --> s3
+s3 --> s4
+s4 --> s5
+s5 --> s6
+s6 --> s7
+s7 --> s8
+s8 --> s9
+s9 --> s10
+@enduml
 ```
 
 

@@ -20,7 +20,10 @@ interface FlowLayout {
   direction: 'horizontal' | 'vertical';
 }
 
-const FLOW_TOKEN = /(?:-{1,3}>|→|⇒|↓|⬇)/g;
+// Require whitespace around ASCII arrows. Without the boundary, expressions
+// such as `netif->input()` and `pbuf->next` are incorrectly split into fake
+// flowchart nodes and can produce a broken, oversized SVG.
+const FLOW_TOKEN = /(?:\s+-{1,3}>\s+|^\s*-{1,3}>\s*|(?:\s+|^)[→⇒↓⬇](?=\s|$))/gm;
 
 function parseFlow(source: string): FlowLayout | null {
   const lines = source

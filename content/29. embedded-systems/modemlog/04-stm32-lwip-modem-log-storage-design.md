@@ -36,15 +36,29 @@
 4. **Task Notification**：只通知“有数据”，不通过消息队列复制日志。
 5. **批量写盘**：使用 FatFs 将连续数据直接写入存储。
 
-```mermaid
-flowchart LR
-    M["Modem 日志"] --> L["lwIP TCP Socket"]
-    L --> R["唯一 Socket 接收线程"]
-    R --> P["协议解析与分流"]
-    P -->|日志 payload| B["静态 SPSC 环形缓冲区"]
-    P -->|命令响应| C["命令状态机"]
-    B --> W["低优先级写盘线程"]
-    W --> F["FatFs / SD卡"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+left to right direction
+
+rectangle "Modem 日志" as M
+rectangle "lwIP TCP Socket" as L
+rectangle "唯一 Socket 接收线程" as R
+rectangle "协议解析与分流" as P
+rectangle "静态 SPSC 环形缓冲区" as B
+rectangle "命令状态机" as C
+rectangle "低优先级写盘线程" as W
+rectangle "FatFs / SD卡" as F
+
+M --> L
+L --> R
+R --> P
+P --> B : 日志 payload
+P --> C : 命令响应
+B --> W
+W --> F
+@enduml
 ```
 
 这只需要一个额外执行上下文。如果系统已有统一存储线程，则不需要新增线程。
@@ -279,15 +293,24 @@ void log_writer_task(void *argument)
 
 必须使用唯一接收线程和增量解析状态机：
 
-```mermaid
-stateDiagram-v2
-    [*] --> ReadHeader
-    ReadHeader --> ReadResponse: 命令响应
-    ReadHeader --> ReadLog: 日志IND
-    ReadHeader --> ReadIndication: 普通IND
-    ReadResponse --> ReadHeader: 消息完成
-    ReadLog --> ReadHeader: payload完成
-    ReadIndication --> ReadHeader: 消息完成
+```plantuml
+@startuml
+hide empty description
+skinparam shadowing false
+
+state "ReadHeader" as ReadHeader
+state "ReadResponse" as ReadResponse
+state "ReadLog" as ReadLog
+state "ReadIndication" as ReadIndication
+
+[*] --> ReadHeader
+ReadHeader --> ReadResponse : 命令响应
+ReadHeader --> ReadLog : 日志IND
+ReadHeader --> ReadIndication : 普通IND
+ReadResponse --> ReadHeader : 消息完成
+ReadLog --> ReadHeader : payload完成
+ReadIndication --> ReadHeader : 消息完成
+@enduml
 ```
 
 解析时必须处理：
@@ -427,12 +450,22 @@ Socket 的 `recv()` 和 FatFs 的 `f_write()` 都可能阻塞。设计目标不�
 | Socket接收线程 | `recv()`、等待缓冲区空间 | 写盘线程继续清空缓冲区 |
 | 写盘线程 | 等待任务通知、`f_write()`、`f_sync()` | Socket线程继续接收数据 |
 
-```mermaid
-flowchart TD
-    RX["Socket接收线程"] -->|"recv阻塞等待数据"| S["lwIP Socket"]
-    RX -->|"收到数据后发布write_seq"| R["SPSC环形缓冲区"]
-    R --> W["写盘线程"]
-    W -->|"f_write阻塞"| D["FatFs / SD卡"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "Socket接收线程" as RX
+rectangle "lwIP Socket" as S
+rectangle "SPSC环形缓冲区" as R
+rectangle "写盘线程" as W
+rectangle "FatFs / SD卡" as D
+
+RX --> S : recv阻塞等待数据
+RX --> R : 收到数据后发布write_seq
+R --> W
+W --> D : f_write阻塞
+@enduml
 ```
 
 两个线程之间不能持有公共大锁，文件系统驱动也不能在写盘期间长时间关闭中断。

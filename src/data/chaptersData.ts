@@ -517,14 +517,14 @@ export const embeddedMeta: Record<string, EmbeddedDocMeta> = {
     order: 3
   },
   modem_complete_mermaid_flows: {
-    titleEn: 'Modem Diagnostic System Complete Mermaid Flowcharts',
-    titleZh: 'Modem 诊断系统完整 Mermaid 架构与流程图',
+    titleEn: 'Modem Diagnostic System Complete PlantUML Diagrams',
+    titleZh: 'Modem 诊断系统完整 PlantUML 架构与流程图',
     descEn:
       'Comprehensive visual specifications: end-to-end data flow, Socket Reactor scheduling, capture tap pass-through, buffer slot ownership state machines, dual network isolation, and quiescence sequences.',
     descZh:
       '全套高清晰架构可视化流程图：端到端双Socket数据流、Reactor公平调度时序、CaptureTap失败放行、环形槽位所有权状态机、双网络域出口隔离与安全停机时序。',
-    tagsEn: ['Mermaid', 'Architecture Diagrams', 'State Machine', 'Sequence Diagram', 'Data Flow'],
-    tagsZh: ['Mermaid图表', '系统架构图', '状态机迁移', '时序流程图', '数据流向'],
+    tagsEn: ['PlantUML', 'Architecture Diagrams', 'State Machine', 'Sequence Diagram', 'Data Flow'],
+    tagsZh: ['PlantUML图表', '系统架构图', '状态机迁移', '时序流程图', '数据流向'],
     order: 4
   },
   stm32_lwip_modem_log_storage_design: {

@@ -26,14 +26,32 @@ Establish two logical network interfaces on both sides of the MCU and Modem:
 - There is also `cell0` on the Modem side: cellular public network outlet.
 
 
-```mermaid
-flowchart LR
-    A["MCU应用"] --> I1["MCU ipc0<br/>172.31.255.2/30"]
-    I1 <-->|"IPC通道0"| I2["Modem ipc0<br/>172.31.255.1/30"]
-    A --> W1["MCU wan0<br/>192.168.225.2/24"]
-    W1 <-->|"IPC通道1或PPP"| W2["Modem wan-lan0<br/>192.168.225.1/24"]
-    W2 --> N["NAT/路由"]
-    N --> C["Modem cell0<br/>蜂窝公网"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+left to right direction
+
+rectangle "MCU应用" as A
+rectangle "MCU ipc0
+172.31.255.2/30" as I1
+rectangle "Modem ipc0
+172.31.255.1/30" as I2
+rectangle "MCU wan0
+192.168.225.2/24" as W1
+rectangle "Modem wan-lan0
+192.168.225.1/24" as W2
+rectangle "NAT/路由" as N
+rectangle "Modem cell0
+蜂窝公网" as C
+
+A --> I1
+I1 <--> I2 : IPC通道0
+A --> W1
+W1 <--> W2 : IPC通道1或PPP
+W2 --> N
+N --> C
+@enduml
 ```
 
 
@@ -65,15 +83,28 @@ Key rules:
 ## 4. MCU side architecture
 
 
-```mermaid
-flowchart TD
-    APP["MCU应用"] --> API["BSD Socket API"]
-    API --> TCP["lwIP TCP/IP"]
-    TCP --> R{"路由策略"}
-    R -->|"IPC目标地址"| IPC["ipc0"]
-    R -->|"其他目标"| WAN["wan0 默认路由"]
-    IPC --> CH0["核间通道0"]
-    WAN --> CH1["核间通道1 / PPP"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "MCU应用" as APP
+rectangle "BSD Socket API" as API
+rectangle "lwIP TCP/IP" as TCP
+diamond "路由策略" as R
+rectangle "ipc0" as IPC
+rectangle "wan0 默认路由" as WAN
+rectangle "核间通道0" as CH0
+rectangle "核间通道1 / PPP" as CH1
+
+APP --> API
+API --> TCP
+TCP --> R
+R --> IPC : IPC目标地址
+R --> WAN : 其他目标
+IPC --> CH0
+WAN --> CH1
+@enduml
 ```
 
 
@@ -147,13 +178,25 @@ void network_init(void)
 ## 5. Modem side architecture
 
 
-```mermaid
-flowchart TD
-    CH0["核间通道0"] --> IPC["Modem ipc0"]
-    IPC --> S["控制/IND/日志Socket服务"]
-    CH1["核间通道1"] --> LAN["wan-lan0"]
-    LAN --> F["仅WAN转发/NAT"]
-    F --> CELL["cell0 蜂窝公网"]
+```plantuml
+@startuml
+hide stereotype
+skinparam shadowing false
+
+rectangle "核间通道0" as CH0
+rectangle "Modem ipc0" as IPC
+rectangle "控制/IND/日志Socket服务" as S
+rectangle "核间通道1" as CH1
+rectangle "wan-lan0" as LAN
+rectangle "仅WAN转发/NAT" as F
+rectangle "cell0 蜂窝公网" as CELL
+
+CH0 --> IPC
+IPC --> S
+CH1 --> LAN
+LAN --> F
+F --> CELL
+@enduml
 ```
 
 
