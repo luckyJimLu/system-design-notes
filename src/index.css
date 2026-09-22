@@ -169,6 +169,19 @@
   touch-action: none;
 }
 
+/* PlantUML images retain their intrinsic working size and scroll inside the
+   same kind of viewport as Mermaid. This prevents a wide protocol diagram
+   from being squeezed until labels become unreadable. */
+.plantuml-viewport {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  max-height: min(72vh, 760px);
+}
+
+.plantuml-image {
+  min-width: min(720px, 100%);
+}
+
 /* Diagram display: wide process flows should retain their working width while
    tall reference diagrams remain bounded by the reading column. */
 .diagram-figure {

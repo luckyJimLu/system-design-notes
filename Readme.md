@@ -118,8 +118,11 @@ content/01. Scaling/Readme.zh.md
 - 标题、列表、表格、引用、代码块和行内代码；
 - 相对路径图片与图片灯箱；
 - Mermaid 图表；
+- PlantUML 图表（代码块语言可使用 `plantuml`、`puml` 或 `uml`）；
 - 受控的 `callout` 语义块；
 - 文本流程图和内置 renderer registry。
+
+PlantUML 图表默认通过 `https://www.plantuml.com/plantuml` 生成 SVG，并在浏览器中保留原始尺寸和横向滚动。部署到受限网络环境时，可通过 `VITE_PLANTUML_SERVER` 指向自建 PlantUML Server；服务不可用时页面会回退到可复制的源码视图。
 
 内容文件只描述知识，不直接写 React/JSX。需要增加新的语义块时，应在 `src/renderers/` 中实现受控 renderer，再由注册表或 Markdown 映射接入。
 
