@@ -181,6 +181,9 @@
 .plantuml-image {
   width: auto;
   min-width: 0;
+  /* Narrow diagrams sit centered; wide diagrams keep left-anchored scrolling
+     because auto margins collapse to zero once content overflows. */
+  margin-inline: auto;
 }
 
 /* Diagram display: wide process flows should retain their working width while
