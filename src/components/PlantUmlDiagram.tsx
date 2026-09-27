@@ -2,6 +2,19 @@ import React, { useMemo, useState } from 'react';
 import { AlertCircle, Check, Copy, Code, Eye, ExternalLink } from 'lucide-react';
 import plantumlEncoder from 'plantuml-encoder';
 
+/**
+ * FNV-1a 32-bit hash — must match the slug generation in scripts/render-plantuml.mjs
+ * to ensure the browser requests the same filename that was rendered to disk.
+ */
+function fnv1a(str: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 interface PlantUmlDiagramProps {
   code: string;
   language?: 'zh' | 'en';
@@ -24,8 +37,9 @@ export const PlantUmlDiagram: React.FC<PlantUmlDiagramProps> = ({ code, language
   const [copied, setCopied] = useState(false);
   const cleanCode = useMemo(() => cleanPlantUml(code), [code]);
   const encoded = useMemo(() => plantumlEncoder.encode(cleanCode), [cleanCode]);
+  const slug = useMemo(() => fnv1a(encoded), [encoded]);
   const cacheParam = retryKey > 0 ? `?retry=${retryKey}` : '';
-  const imageUrl = `${import.meta.env.BASE_URL}plantuml/${encoded}.svg${cacheParam}`;
+  const imageUrl = `${import.meta.env.BASE_URL}plantuml/${slug}.svg${cacheParam}`;
 
   const labels = {
     diagram: language === 'zh' ? '流程图' : 'Diagram',
