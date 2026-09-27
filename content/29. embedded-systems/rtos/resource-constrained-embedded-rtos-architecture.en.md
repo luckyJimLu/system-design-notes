@@ -198,7 +198,7 @@ left to right direction
 
 rectangle "Hardware IRQ" as irq
 rectangle "Top-Half ISR\n(Fast Sampling / Clear IRQ Flags)" as topHalf
-diamond "Lightweight IPC Decoupling\n(Ring Buffer / Task Notification)" as ipc
+rectangle "Lightweight IPC Decoupling\n(Ring Buffer / Task Notification)" as ipc
 rectangle "Bottom-Half Worker Task / State Machine\n(Full Protocol Parsing / State Transition)" as bottomHalf
 rectangle "Business Logic Execution" as biz
 
@@ -280,11 +280,11 @@ skinparam shadowing false
 
 rectangle "Enter Idle Task" as start
 rectangle "Calculate Next Task Wakeup Time\n(Next Wakeup Tick)" as calc
-diamond "Sleep Duration\n> Minimum Threshold?" as checkMin
+rectangle "Sleep Duration\n> Minimum Threshold?" as checkMin
 rectangle "Standard Light Sleep WFI\nKeep SysTick Running" as normalIdle
 rectangle "Configure Low-Power Timer (LPTIM)" as cfgTimer
 rectangle "Stop / Mask Standard SysTick" as stopTick
-diamond "Atomic Check: Any New Interrupt/Task\nBecame Ready During Setup?" as raceCheck
+rectangle "Atomic Check: Any New Interrupt/Task\nBecame Ready During Setup?" as raceCheck
 rectangle "Abort Sleep Immediately\nRestore SysTick Scheduling" as abortSleep
 rectangle "Execute WFI / WFE (Deep Sleep)" as enterWFI
 rectangle "Hardware Interrupt Wakeup" as wakeup
@@ -679,7 +679,7 @@ package "Task Heartbeats (Independent Bits)" as TASKS {
   rectangle "Task C (Sensor Sampler)" as tC
 }
 rectangle "Watchdog Supervisor Task" as supervisor
-diamond "All Critical Task Bits\nHealthy & Present?" as check
+rectangle "All Critical Task Bits\nHealthy & Present?" as check
 rectangle "Feed Hardware Watchdog" as feed
 rectangle "Atomic Clear Heartbeat Bitmap" as clear
 rectangle "Next Supervision Period" as nextPeriod

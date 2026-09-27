@@ -194,7 +194,7 @@ left to right direction
 
 rectangle "硬件中断 IRQ" as irq
 rectangle "顶半部 ISR\n(快速采样/清除中断标志)" as topHalf
-diamond "轻量 IPC 解耦\n(Ring Buffer / Task Notification)" as ipc
+rectangle "轻量 IPC 解耦\n(Ring Buffer / Task Notification)" as ipc
 rectangle "底半部 Worker Task / 状态机\n(完整报文解析 / 状态转移)" as bottomHalf
 rectangle "业务逻辑处理与完成" as biz
 
@@ -276,11 +276,11 @@ skinparam shadowing false
 
 rectangle "系统进入空闲 Idle 任务" as start
 rectangle "计算下一次任务唤醒时间\n(Next Wakeup Tick)" as calc
-diamond "剩余睡眠时间\n> 最小阈值?" as checkMin
+rectangle "剩余睡眠时间\n> 最小阈值?" as checkMin
 rectangle "执行常规低开销 WFI\n维持系统 Tick" as normalIdle
 rectangle "配置低功耗硬件定时器 (LPTIM)" as cfgTimer
 rectangle "停止/屏蔽标准 SysTick" as stopTick
-diamond "原子确认: 是否有新中断/任务\n在准备期间就绪 (Race Check)?" as raceCheck
+rectangle "原子确认: 是否有新中断/任务\n在准备期间就绪 (Race Check)?" as raceCheck
 rectangle "中止睡眠 (Sleep Abort)\n立即恢复 SysTick 调度" as abortSleep
 rectangle "执行 WFI / WFE 进入低功耗模式" as enterWFI
 rectangle "中断唤醒" as wakeup
@@ -656,7 +656,7 @@ package "业务任务心跳 (独立 Bit 位)" as TASKS {
   rectangle "Task C (传感器采样)" as tC
 }
 rectangle "Watchdog Supervisor 检查任务" as supervisor
-diamond "所有关键业务位\n均已打卡 (WaitAll)?" as check
+rectangle "所有关键业务位\n均已打卡 (WaitAll)?" as check
 rectangle "刷新物理看门狗 (Feed WDG)" as feed
 rectangle "原子清零所有心跳位图" as clear
 rectangle "进入下一监管周期" as nextPeriod
