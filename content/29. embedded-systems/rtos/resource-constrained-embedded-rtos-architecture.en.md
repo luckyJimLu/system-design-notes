@@ -133,14 +133,10 @@ Prohibited:
 skinparam shadowing false
 
 start
-partition "Task A" {
-  :lock Bus;
-  :lock Device;
-}
-partition "Task B" {
-  :lock Device;
-  :lock Bus;
-}
+#LightBlue:Task A: lock Bus;
+#LightBlue:Task A: lock Device;
+#LightCoral:Task B: lock Device;
+#LightCoral:Task B: lock Bus;
 stop
 @enduml
 ```
