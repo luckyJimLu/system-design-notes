@@ -35,8 +35,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install PlantUML runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre-headless graphviz
+
+      - name: Download PlantUML jar
+        run: |
+          mkdir -p .cache
+          curl -L --fail --retry 3 \
+            -o .cache/plantuml.jar \
+            https://repo1.maven.org/maven2/net/sourceforge/plantuml/plantuml/1.2024.8/plantuml-1.2024.8.jar
+
+      - name: Render PlantUML diagrams
+        run: npm run render:plantuml
+
       - name: Build
         run: npm run build
+
+      - name: Upload PlantUML render logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plantuml-render-logs
+          path: |
+            logs/plantuml-render.log
+            public/plantuml/render-log.json
+          if-no-files-found: ignore
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

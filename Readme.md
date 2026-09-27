@@ -122,7 +122,7 @@ content/01. Scaling/Readme.zh.md
 - 受控的 `callout` 语义块；
 - 文本流程图和内置 renderer registry。
 
-PlantUML 图表默认通过 `https://www.plantuml.com/plantuml` 生成 SVG，并在浏览器中保留原始尺寸和横向滚动。部署到受限网络环境时，可通过 `VITE_PLANTUML_SERVER` 指向一个或多个自建 PlantUML Server，多个地址使用英文逗号分隔。页面只使用真实 PlantUML 渲染服务：当前服务失败时会自动尝试下一个服务，全部失败后展示可复制源码，不再伪装成已渲染成功的图形。
+PlantUML 图表不在浏览器中请求在线渲染服务。GitHub Actions 会在构建前安装 Java / Graphviz，下载固定版本的 PlantUML jar，扫描 Markdown 中的 `plantuml` / `puml` / `uml` 代码块并本地生成 SVG 到 `public/plantuml/*.svg`。前端根据 PlantUML 源码的稳定编码读取随站点发布的静态 SVG；缺失时显示源码和错误态。渲染过程会写入 `logs/plantuml-render.log` 与 `public/plantuml/render-log.json`，便于后续定位和修复失败图块。
 
 内容文件只描述知识，不直接写 React/JSX。需要增加新的语义块时，应在 `src/renderers/` 中实现受控 renderer，再由注册表或 Markdown 映射接入。
 
