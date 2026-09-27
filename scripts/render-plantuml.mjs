@@ -51,11 +51,17 @@ function cleanPlantUml(code) {
 
 function extractPlantUmlBlocks(markdown) {
   const blocks = [];
-  const fence = /```(?:plantuml|puml|uml)\s*\n([\s\S]*?)```/gi;
+  const fence = /```([^\n`]*)\n([\s\S]*?)```/g;
   let match;
   while ((match = fence.exec(markdown))) {
+    const language = match[1].trim().split(/\s+/)[0].toLowerCase();
+    const code = match[2];
+    if (!['plantuml', 'puml', 'uml'].includes(language) && !/^@start(?:uml|mindmap|wbs|gantt|json|yaml)\b/i.test(code.trim())) {
+      continue;
+    }
+
     blocks.push({
-      code: cleanPlantUml(match[1]),
+      code: cleanPlantUml(code),
       line: markdown.slice(0, match.index).split('\n').length,
     });
   }
