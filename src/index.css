@@ -179,7 +179,8 @@
 }
 
 .plantuml-image {
-  min-width: min(720px, 100%);
+  width: auto;
+  min-width: 0;
 }
 
 /* Diagram display: wide process flows should retain their working width while

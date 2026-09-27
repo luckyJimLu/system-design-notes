@@ -10,6 +10,7 @@ import { I18N_STRINGS } from '../data/i18n';
 import { truncateTitle } from '../utils/title';
 import { MermaidDiagram } from './MermaidDiagram';
 import { isPlantUmlSource, PlantUmlDiagram } from './PlantUmlDiagram';
+import { HighlightedCode } from './HighlightedCode';
 import {
   Bookmark,
   CheckCircle2,
@@ -361,7 +362,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
             },
             // Code & Codeblocks
             code: ({ node, className, children, ...props }) => {
-              const match = /language-(\w+)/.exec(className || '');
+              const match = /language-([^\s]+)/.exec(className || '');
               const codeString = String(children).replace(/\n$/, '');
               const isBlock = codeString.includes('\n') || match;
 
@@ -378,7 +379,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                 // an @startuml-style header. This keeps legacy documents from
                 // falling back to an opaque code block.
                 if (['plantuml', 'puml', 'uml'].includes(lang) || isPlantUmlSource(codeString)) {
-                  return <PlantUmlDiagram code={codeString} language={language} />;
+                  return <PlantUmlDiagram key={codeString} code={codeString} language={language} />;
                 }
 
                 if (lang === 'callout') {
@@ -439,7 +440,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                       </button>
                     </div>
                     <pre className={fontConfig.preCode}>
-                      <code>{children}</code>
+                      <HighlightedCode code={codeString} language={lang} />
                     </pre>
                   </div>
                 );

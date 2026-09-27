@@ -50,6 +50,9 @@ jobs:
       - name: Render PlantUML diagrams
         run: npm run render:plantuml
 
+      - name: Verify browser PlantUML asset paths
+        run: node --test scripts/plantuml.test.mjs
+
       - name: Build
         run: npm run build
 

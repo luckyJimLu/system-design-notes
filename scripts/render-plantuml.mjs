@@ -2,20 +2,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import plantumlEncoder from 'plantuml-encoder';
-
-/**
- * FNV-1a 32-bit hash — produces a short, deterministic filename slug
- * that avoids ENAMETOOLONG on Linux (255-byte filename limit).
- */
-function fnv1a(str) {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(36);
-}
+import { cleanPlantUml, plantUmlSlug } from '../src/utils/plantuml.mjs';
 
 const repoRoot = process.cwd();
 const contentRoot = path.join(repoRoot, 'content');
@@ -41,12 +28,6 @@ function walk(dir) {
   }
 
   return result;
-}
-
-function cleanPlantUml(code) {
-  const value = code.trim();
-  if (/^@start(?:uml|mindmap|wbs|gantt|json|yaml)\b/i.test(value)) return value;
-  return `@startuml\n${value}\n@enduml`;
 }
 
 function extractPlantUmlBlocks(markdown) {
@@ -83,7 +64,7 @@ function writeLogs(summary) {
     `failed=${summary.failed}`,
     '',
     ...logEntries.map(entry => [
-      `[${entry.status}] ${entry.encoded}`,
+      `[${entry.status}] ${entry.slug}`,
       `  output: ${entry.output}`,
       `  sources: ${entry.sources.map(source => `${source.file}:${source.line}`).join(', ')}`,
       entry.error ? `  error: ${entry.error.replace(/\s+/g, ' ').trim()}` : '',
@@ -118,19 +99,21 @@ function main() {
   for (const file of walk(contentRoot)) {
     const markdown = fs.readFileSync(file, 'utf8');
     for (const { code, line } of extractPlantUmlBlocks(markdown)) {
-      const encoded = plantumlEncoder.encode(code);
-      if (!diagrams.has(encoded)) {
-        diagrams.set(encoded, { code, sources: [] });
+      const slug = plantUmlSlug(code);
+      if (diagrams.has(slug) && diagrams.get(slug).code !== code) {
+        throw new Error(`PlantUML filename collision: ${slug}`);
       }
-      diagrams.get(encoded).sources.push({ file: path.relative(repoRoot, file), line });
+      if (!diagrams.has(slug)) {
+        diagrams.set(slug, { code, sources: [] });
+      }
+      diagrams.get(slug).sources.push({ file: path.relative(repoRoot, file), line });
     }
   }
 
   let rendered = 0;
   let failed = 0;
 
-  for (const [encoded, diagram] of diagrams) {
-    const slug = fnv1a(encoded);
+  for (const [slug, diagram] of diagrams) {
     const sourcePath = path.join(tempDir, `${slug}.puml`);
     const outputPath = path.join(publicOutputDir, `${slug}.svg`);
     fs.writeFileSync(sourcePath, `${diagram.code}\n`, 'utf8');
@@ -144,7 +127,7 @@ function main() {
       rendered++;
       logEntries.push({
         status: 'rendered',
-        encoded,
+        slug,
         output: path.relative(repoRoot, outputPath),
         sources: diagram.sources,
       });
@@ -152,7 +135,7 @@ function main() {
       failed++;
       logEntries.push({
         status: 'failed',
-        encoded,
+        slug,
         output: path.relative(repoRoot, outputPath),
         sources: diagram.sources,
         error: `${error.stdout || ''}\n${error.stderr || ''}`.trim() || error.message,
