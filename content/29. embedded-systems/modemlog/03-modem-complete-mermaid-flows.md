@@ -20,7 +20,7 @@ package "MCU 接入调度域 (Socket Reactor Task)" as INGRESS {
 }
 package "lwIP 网络业务域 (MCU 正常业务流量)" as NETIF {
   rectangle "正常 lwIP RX / TX 报文流" as netTraffic
-  diamond "CaptureTap\n旁路观察门" as tap
+  rectangle "CaptureTap\n旁路观察门" as tap
   rectangle "原始业务协议栈正常流转" as netStack
 }
 package "静态内存池 (SPSC 无锁环形缓冲区)" as SRAM_POOLS {
@@ -63,18 +63,18 @@ hide stereotype
 skinparam shadowing false
 
 rectangle "调度周期开始" as start
-diamond "处理控制与停机信号?" as checkCtl
+rectangle "处理控制与停机信号?" as checkCtl
 rectangle "更新会话状态机\n执行局部静默/排空" as handleCtl
 rectangle "根据环空闲配额\n重构 fd_set 集合" as buildFds
 rectangle "执行 select() (有限超时 5~10ms)" as doSelect
-diamond "select 返回结果?" as selResult
-diamond "检查 CPU 时间片配额\n与停机终止标志?" as checkBudget
+rectangle "select 返回结果?" as selResult
+rectangle "检查 CPU 时间片配额\n与停机终止标志?" as checkBudget
 rectangle "记录瞬态告警并退避" as logErr
-diamond "CHR 就绪?" as checkChr
+rectangle "CHR 就绪?" as checkChr
 rectangle "限额读取 CHR 帧 (防饥饿)\n校验帧长与头部 CRC" as readChr
-diamond "ModemLog 就绪?" as checkLog
+rectangle "ModemLog 就绪?" as checkLog
 rectangle "限额读取 Log 块 (防独占 CPU)\n写入预分配固定内存块" as readLog
-diamond "是否有新数据块就绪?" as checkPublish
+rectangle "是否有新数据块就绪?" as checkPublish
 rectangle "内存屏障发布至环形队列\n轻量信号量通知 Storage" as publish
 rectangle "taskYIELD() 让出时间片" as yield
 
@@ -111,14 +111,14 @@ hide stereotype
 skinparam shadowing false
 
 rectangle "原始报文到达网络观察点 lwIP Ingress / Egress" as pktIn
-diamond "1. 抓包功能是否启用\n且匹配网卡监听白名单?" as checkEn
+rectangle "1. 抓包功能是否启用\n且匹配网卡监听白名单?" as checkEn
 rectangle "原路径继续：无延迟无损耗送入 lwIP" as passOriginal
-diamond "2. 过滤及包率字节预算检查\n(Token Bucket 速率限制)?" as checkBudget
+rectangle "2. 过滤及包率字节预算检查\n(Token Bucket 速率限制)?" as checkBudget
 rectangle "仅递增预算 Drop 计数器" as dropCount1
-diamond "3. 尝试原子预约私有抓包槽位\n(非阻塞 Try-Acquire)?" as acquireSlot
+rectangle "3. 尝试原子预约私有抓包槽位\n(非阻塞 Try-Acquire)?" as acquireSlot
 rectangle "仅递增溢出 Drop 计数器\n(不阻塞正常业务通信)" as dropCount2
 rectangle "4. 限长只读复制 (SnapLen 截断)\n只读持有 pbuf，杜绝长周期引用" as copyPkt
-diamond "5. 快照与分段校验完整?" as checkValid
+rectangle "5. 快照与分段校验完整?" as checkValid
 rectangle "归还槽位至 FREE 状态\n递增快照损坏 Drop 计数" as discardSlot
 rectangle "6. Release 标记槽位为 READY\n异步通知 StorageOwner 消费" as publishSlot
 rectangle "原始报文继续正常收发处理" as pktOut
@@ -177,9 +177,9 @@ package "应用层套接字发起来源" as APPS {
   rectangle "公网业务应用\n(HTTP / MQTT / OTA Socket)" as wanApps
 }
 package "MCU 路由裁决与合规引擎" as ROUTING {
-  diamond "根据目的 IP 查路由表" as routeTable
-  diamond "IPC 边界校验规则\n仅放行 Modem 本地诊断地址" as guardIPC
-  diamond "WAN 边界校验规则\n严禁泄漏任何 IPC 内部私网地址" as guardWAN
+  rectangle "根据目的 IP 查路由表" as routeTable
+  rectangle "IPC 边界校验规则\n仅放行 Modem 本地诊断地址" as guardIPC
+  rectangle "WAN 边界校验规则\n严禁泄漏任何 IPC 内部私网地址" as guardWAN
 }
 package "网络物理/虚拟接口" as NETIFS {
   rectangle "IPC 虚拟网卡接口\n(核间专属通信)" as netifIPC
@@ -280,18 +280,18 @@ skinparam shadowing false
 rectangle "检测到 SDIO 变慢或环形缓冲积压达到高水位" as start
 package "第一级退让：削减非关键旁路" as T1 {
   rectangle "1. 立即停止或缩减 CaptureTap 准入\n(降级为 100% 旁路丢弃，业务完全不受损)" as tier1
-  diamond "积压是否缓解?" as checkT1
+  rectangle "积压是否缓解?" as checkT1
   rectangle "恢复 Capture 抓包采样" as recoverT1
   rectangle "恢复常态运行" as normalState
   rectangle "2. ModemLog 独立高水位流控\n(收缩 TCP 接收窗口，依靠协议栈自然背压)" as tier2
 }
 package "第二级退让：流控高吞吐日志" as T2 {
-  diamond "积压是否缓解?" as checkT2
+  rectangle "积压是否缓解?" as checkT2
   rectangle "缓慢恢复正常接收窗口" as recoverT2
   rectangle "3. CHR 维持高优先级排队\n(仅在超限时按可靠性协议拒绝低优事件)" as tier3
 }
 package "第三级退让：信令可靠性保护" as T3 {
-  diamond "存储写入停滞\n是否超过故障截止时间?" as checkTimeout
+  rectangle "存储写入停滞\n是否超过故障截止时间?" as checkTimeout
   rectangle "按低水位及冷却条件等待恢复" as waitRecovery
   rectangle "4. 诊断文件标记为 FAULTED\n安全中止 DMA 传输并关闭诊断文件" as tier4
 }

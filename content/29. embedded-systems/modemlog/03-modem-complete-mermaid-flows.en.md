@@ -20,7 +20,7 @@ package "MCU Ingress Domain (Socket Reactor Task)" as INGRESS {
 }
 package "lwIP Network Domain (Normal MCU Traffic)" as NETIF {
   rectangle "Normal lwIP RX / TX Packet Flow" as netTraffic
-  diamond "CaptureTap\nPassive Observation Gate" as tap
+  rectangle "CaptureTap\nPassive Observation Gate" as tap
   rectangle "Normal lwIP Protocol Stack Continues" as netStack
 }
 package "Static SRAM Pools (SPSC Lock-Free Ring Buffers)" as SRAM_POOLS {
@@ -63,18 +63,18 @@ hide stereotype
 skinparam shadowing false
 
 rectangle "Scheduling Period Begins" as start
-diamond "Pending Control / Stop Signal?" as checkCtl
+rectangle "Pending Control / Stop Signal?" as checkCtl
 rectangle "Transition Session State Machine\nExecute Quiesce / Drain" as handleCtl
 rectangle "Rebuild fd_set\nBased on Free Ring Quotas" as buildFds
 rectangle "Execute select() (Bounded timeout 5~10ms)" as doSelect
-diamond "select() Return Status?" as selResult
-diamond "Check CPU Time Budget\n& Stop Request Flag?" as checkBudget
+rectangle "select() Return Status?" as selResult
+rectangle "Check CPU Time Budget\n& Stop Request Flag?" as checkBudget
 rectangle "Log Transient Warning & Backoff" as logErr
-diamond "CHR Ready?" as checkChr
+rectangle "CHR Ready?" as checkChr
 rectangle "Read Bounded CHR Frames\nVerify Frame Length & CRC" as readChr
-diamond "ModemLog Ready?" as checkLog
+rectangle "ModemLog Ready?" as checkLog
 rectangle "Read Bounded Log Chunk (Max 4KB)\nPrevent CPU Starvation" as readLog
-diamond "New Chunks Ready?" as checkPublish
+rectangle "New Chunks Ready?" as checkPublish
 rectangle "Publish with Memory Barrier to Ring\nLightweight Semaphore to Storage" as publish
 rectangle "taskYIELD() Relinquish Timeslice" as yield
 
@@ -111,14 +111,14 @@ hide stereotype
 skinparam shadowing false
 
 rectangle "Original Packet at lwIP Ingress / Egress Tap" as pktIn
-diamond "1. Capture Globally Enabled\n& Interface Whitelisted?" as checkEn
+rectangle "1. Capture Globally Enabled\n& Interface Whitelisted?" as checkEn
 rectangle "Normal Path: Pass to lwIP Stack with Zero Delay" as passOriginal
-diamond "2. Filter & Rate-Budget Check\n(Token Bucket Limiter)?" as checkBudget
+rectangle "2. Filter & Rate-Budget Check\n(Token Bucket Limiter)?" as checkBudget
 rectangle "Increment Rate-Limit Drop Counter Only" as dropCount1
-diamond "3. Atomic Try-Acquire Private Slot\n(Non-blocking Check)?" as acquireSlot
+rectangle "3. Atomic Try-Acquire Private Slot\n(Non-blocking Check)?" as acquireSlot
 rectangle "Increment Overflow Drop Counter Only\n(Never Block Network Stack)" as dropCount2
 rectangle "4. SnapLen Truncated Read-Only Copy\nRead pbuf Only; No Long Holding" as copyPkt
-diamond "5. Snapshot & Segment Verification OK?" as checkValid
+rectangle "5. Snapshot & Segment Verification OK?" as checkValid
 rectangle "Return Slot to FREE State\nIncrement Corrupt Drop Counter" as discardSlot
 rectangle "6. Release Mark Slot as READY\nNotify StorageOwner Task" as publishSlot
 rectangle "Original Packet Continues Normal Transmission" as pktOut
@@ -177,9 +177,9 @@ package "Application Layer Socket Sources" as APPS {
   rectangle "Public Application Traffic\n(HTTP / MQTT / OTA Sockets)" as wanApps
 }
 package "MCU Routing Decision & Compliance Engine" as ROUTING {
-  diamond "Route Lookup by Destination IP" as routeTable
-  diamond "IPC Boundary Compliance\nAllow Only Modem Local Diag IPs" as guardIPC
-  diamond "WAN Boundary Compliance\nStrictly Deny IPC Private Subnets" as guardWAN
+  rectangle "Route Lookup by Destination IP" as routeTable
+  rectangle "IPC Boundary Compliance\nAllow Only Modem Local Diag IPs" as guardIPC
+  rectangle "WAN Boundary Compliance\nStrictly Deny IPC Private Subnets" as guardWAN
 }
 package "Network Interface Layer" as NETIFS {
   rectangle "IPC Virtual Netif\n(Inter-core Communication)" as netifIPC
@@ -280,18 +280,18 @@ skinparam shadowing false
 rectangle "SDIO Slowdown or Buffer High-Watermark Detected" as start
 package "Tier 1 Backoff: Shed Non-Essential Sideband" as T1 {
   rectangle "1. Throttle / Suspend CaptureTap Ingress\n(100% bypass drop; zero production impact)" as tier1
-  diamond "Queue Pressure Relieved?" as checkT1
+  rectangle "Queue Pressure Relieved?" as checkT1
   rectangle "Restore Capture Tap Sampling" as recoverT1
   rectangle "Resume Normal Operation" as normalState
   rectangle "2. ModemLog Independent High-Watermark Flow Control\n(Shrink TCP Receive Window to apply backpressure)" as tier2
 }
 package "Tier 2 Backoff: Throttle High-Throughput Logs" as T2 {
-  diamond "Queue Pressure Relieved?" as checkT2
+  rectangle "Queue Pressure Relieved?" as checkT2
   rectangle "Gradually Reopen Receive Window" as recoverT2
   rectangle "3. CHR High-Priority Protected Queuing\n(Preserve crash dumps & critical events only)" as tier3
 }
 package "Tier 3 Backoff: Protect Critical Telemetry" as T3 {
-  diamond "Storage Stall Duration\nExceeded Safety Threshold?" as checkTimeout
+  rectangle "Storage Stall Duration\nExceeded Safety Threshold?" as checkTimeout
   rectangle "Await SDIO Internal Block Erase Completion" as waitRecovery
   rectangle "4. Mark Diagnostic Session as FAULTED\nAbort DMA and Safely Close Corrupted File" as tier4
 }

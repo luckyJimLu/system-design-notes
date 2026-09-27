@@ -50,12 +50,9 @@ skinparam shadowing false
 
 rectangle "核间物理链路" as PHY
 rectangle "Channel Demux" as DEMUX
-rectangle "Channel 0
-ModemLog Ring" as M
-rectangle "Channel 1
-TCPDump Ring" as T
-rectangle "Channel 2
-CHR Ring" as C
+rectangle "Channel 0\nModemLog Ring" as M
+rectangle "Channel 1\nTCPDump Ring" as T
+rectangle "Channel 2\nCHR Ring" as C
 rectangle "常驻核心调度Worker" as CORE
 rectangle "可选Burst Worker" as BURST
 rectangle "Storage请求队列" as SQ
@@ -162,10 +159,10 @@ rectangle "等待Task Notification" as WAIT
 rectangle "获取ready bits" as SNAP
 rectangle "按优先级和等待时间选通道" as PICK
 rectangle "处理有限字节/时间预算" as RUN
-diamond "该通道已空？" as EMPTY
+rectangle "该通道已空？" as EMPTY
 rectangle "保留ready bit" as AGAIN
 rectangle "原子清除bit并再次检查" as CLEAR
-diamond "还有ready通道？" as MORE
+rectangle "还有ready通道？" as MORE
 
 WAIT --> SNAP
 SNAP --> PICK

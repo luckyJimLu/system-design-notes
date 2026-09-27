@@ -33,17 +33,12 @@ skinparam shadowing false
 left to right direction
 
 rectangle "MCU应用" as A
-rectangle "MCU ipc0
-172.31.255.2/30" as I1
-rectangle "Modem ipc0
-172.31.255.1/30" as I2
-rectangle "MCU wan0
-192.168.225.2/24" as W1
-rectangle "Modem wan-lan0
-192.168.225.1/24" as W2
+rectangle "MCU ipc0\n172.31.255.2/30" as I1
+rectangle "Modem ipc0\n172.31.255.1/30" as I2
+rectangle "MCU wan0\n192.168.225.2/24" as W1
+rectangle "Modem wan-lan0\n192.168.225.1/24" as W2
 rectangle "NAT/路由" as N
-rectangle "Modem cell0
-蜂窝公网" as C
+rectangle "Modem cell0\n蜂窝公网" as C
 
 A --> I1
 I1 <--> I2 : IPC通道0
@@ -91,7 +86,7 @@ skinparam shadowing false
 rectangle "MCU应用" as APP
 rectangle "BSD Socket API" as API
 rectangle "lwIP TCP/IP" as TCP
-diamond "路由策略" as R
+rectangle "路由策略" as R
 rectangle "ipc0" as IPC
 rectangle "wan0 默认路由" as WAN
 rectangle "核间通道0" as CH0

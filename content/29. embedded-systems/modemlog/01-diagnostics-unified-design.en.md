@@ -216,13 +216,13 @@ hide stereotype
 skinparam shadowing false
 
 rectangle "原包到达观察点" as packet
-diamond "启用且在范围内？" as enabled
+rectangle "启用且在范围内？" as enabled
 rectangle "原路径继续" as pass
-diamond "过滤及包率字节预算通过？" as budget
-diamond "立即取得私有槽？" as slot
+rectangle "过滤及包率字节预算通过？" as budget
+rectangle "立即取得私有槽？" as slot
 rectangle "仅增加抓包drop" as drop
 rectangle "限长限链段只读复制" as copy
-diamond "快照完整？" as valid
+rectangle "快照完整？" as valid
 rectangle "归还未发布槽并记drop" as discard
 rectangle "release发布槽并通知Storage" as publish
 
