@@ -12,7 +12,21 @@ const textLogPath = path.join(logDir, 'plantuml-render.log');
 const jsonLogPath = path.join(publicOutputDir, 'render-log.json');
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'system-design-notes-plantuml-'));
 const plantumlJar = process.env.PLANTUML_JAR || path.join(repoRoot, '.cache', 'plantuml.jar');
+const cjkFontName = process.env.PLANTUML_CJK_FONT || 'Noto Sans CJK SC';
 const logEntries = [];
+
+// Chinese text needs an installed CJK font (e.g. fonts-noto-cjk) plus an explicit
+// defaultFontName, otherwise Java AWT renders tofu boxes. The preamble is injected
+// only into the temp file that reaches PlantUML; slugs keep hashing the original
+// source so browser-side plantUmlSlug() still matches the emitted filenames.
+const stylePreamble = [
+  `skinparam defaultFontName "${cjkFontName}"`,
+];
+
+function withSharedStyle(code) {
+  const [firstLine, ...rest] = code.split('\n');
+  return [firstLine, ...stylePreamble, ...rest].join('\n');
+}
 
 function walk(dir) {
   const result = [];
@@ -116,7 +130,7 @@ function main() {
   for (const [slug, diagram] of diagrams) {
     const sourcePath = path.join(tempDir, `${slug}.puml`);
     const outputPath = path.join(publicOutputDir, `${slug}.svg`);
-    fs.writeFileSync(sourcePath, `${diagram.code}\n`, 'utf8');
+    fs.writeFileSync(sourcePath, `${withSharedStyle(diagram.code)}\n`, 'utf8');
 
     try {
       execFileSync(
