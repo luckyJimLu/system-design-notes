@@ -11,6 +11,7 @@ export interface UIStrings {
     vol1: string;
     vol2: string;
     modem: string;
+    developerTools: string;
     saved: string;
   };
   sidebar: {
@@ -120,6 +121,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       vol1: 'Vol 1',
       vol2: 'Vol 2',
       modem: 'Embedded / RTOS',
+      developerTools: 'Developer Tools',
       saved: 'Saved'
     },
     sidebar: {
@@ -227,6 +229,7 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       vol1: '第一卷',
       vol2: '第二卷',
       modem: '嵌入式',
+      developerTools: '开发工具',
       saved: '收藏夹'
     },
     sidebar: {
