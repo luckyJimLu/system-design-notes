@@ -42,6 +42,9 @@ export function loadImportedContentWithDiagnostics(): ImportedContentResult {
     const titleEn = typeof parsed.data.titleEn === 'string' ? parsed.data.titleEn : title;
     const tags = Array.isArray(parsed.data.tags) ? parsed.data.tags : [];
     const number = typeof parsed.data.order === 'number' ? parsed.data.order : 1000;
+    const category: Chapter['category'] = parsed.data.category === 'developer-tools'
+      ? 'developer-tools'
+      : 'specialized';
     const document: Chapter = {
       id: `content-${id}`,
       folderName: path.split('/')[path.split('/').length - 2] || '',
@@ -50,7 +53,7 @@ export function loadImportedContentWithDiagnostics(): ImportedContentResult {
       title: locale === 'en' ? title : titleEn,
       titleZh: locale === 'zh' ? title : title,
       volume: 0,
-      category: 'specialized',
+      category,
       description: typeof parsed.data.description === 'string' ? parsed.data.description : '',
       descriptionZh: typeof parsed.data.descriptionZh === 'string' ? parsed.data.descriptionZh : '',
       tags,
