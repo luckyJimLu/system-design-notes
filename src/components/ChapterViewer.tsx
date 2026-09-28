@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -8,15 +8,14 @@ import { isTextFlowchart, TextFlowchart } from '../renderers/TextFlowchart';
 import { builtinRendererRegistry } from '../renderers/registry';
 import { I18N_STRINGS } from '../data/i18n';
 import { truncateTitle } from '../utils/title';
+import { slugify, extractTextFromChildren, hashString } from '../utils/slug';
 import { MermaidDiagram } from './MermaidDiagram';
+import { CodeBlock } from './CodeBlock';
 import { isPlantUmlSource, PlantUmlDiagram } from './PlantUmlDiagram';
-import { HighlightedCode } from './HighlightedCode';
 import {
   Bookmark,
   CheckCircle2,
   Clock,
-  Copy,
-  Check,
   Maximize2,
   ArrowLeft,
   ArrowRight,
@@ -50,7 +49,36 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
   language,
 }) => {
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
   const t = I18N_STRINGS[language];
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  // Per-render deterministic state shared by the inline markdown renderer
+  // callbacks below. A fresh object per render is StrictMode-safe, and the
+  // document order of headings/code blocks is stable, so generated ids stay
+  // consistent across renders and match extractHeadings output.
+  const renderState = {
+    headingSeenIds: new Set<string>(),
+    headingIndex: 0,
+    codeIndex: 0,
+  };
+
+  const getHeadingId = (text: string): string => {
+    const id = slugify(text, {
+      fallbackIndex: renderState.headingIndex,
+      seenIds: renderState.headingSeenIds,
+    });
+    renderState.headingIndex += 1;
+    return id;
+  };
+
+  const getCodeBlockId = (codeString: string): string =>
+    `code-${renderState.codeIndex++}-${hashString(codeString)}`;
 
   // Active markdown content based on current language setting
   const activeMarkdown = useMemo(() => {
@@ -76,9 +104,13 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
   const nextChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null;
 
   const handleCopyCode = (codeText: string, id: string) => {
-    navigator.clipboard.writeText(codeText);
+    navigator.clipboard.writeText(codeText).catch(() => {
+      // Clipboard API may be unavailable (e.g. non-secure context);
+      // still show the copied feedback.
+    });
     setCopiedCodeId(id);
-    setTimeout(() => setCopiedCodeId(null), 2000);
+    if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
   // Font size configuration mapping
@@ -130,14 +162,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
     },
   }[fontSize];
 
-  // Helper to slugify heading titles to match TableOfContents
-  const slugify = (text: string) => {
-    return text
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/\s+/g, '-');
-  };
-
+  // Heading ids must match extractHeadings output (used by TableOfContents),
+  // so both go through the shared slugify in utils/slug.
   const fullCurrentTitle = language === 'zh' ? (chapter.titleZh || chapter.title) : chapter.title;
   const currentTitle = truncateTitle(fullCurrentTitle);
   const currentDesc = language === 'zh' ? (chapter.descriptionZh || chapter.description) : chapter.description;
@@ -242,8 +268,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
           components={{
             // Heading 1
             h1: ({ children }) => {
-              const text = String(children);
-              const id = slugify(text);
+              const text = extractTextFromChildren(children);
+              const id = getHeadingId(text);
               return (
                 <h1 id={id} className={fontConfig.h1}>
                   {children}
@@ -252,8 +278,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
             },
             // Heading 2
             h2: ({ children }) => {
-              const text = String(children);
-              const id = slugify(text);
+              const text = extractTextFromChildren(children);
+              const id = getHeadingId(text);
               return (
                 <h2 id={id} className={fontConfig.h2}>
                   <span>{children}</span>
@@ -269,8 +295,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
             },
             // Heading 3
             h3: ({ children }) => {
-              const text = String(children);
-              const id = slugify(text);
+              const text = extractTextFromChildren(children);
+              const id = getHeadingId(text);
               return (
                 <h3 id={id} className={fontConfig.h3}>
                   {children}
@@ -367,7 +393,9 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               const isBlock = codeString.includes('\n') || match;
 
               if (isBlock) {
-                const codeId = `code-${Math.random().toString(36).slice(2, 7)}`;
+                // Stable id across renders (document order + content hash),
+                // so the copied feedback state survives re-renders.
+                const codeId = getCodeBlockId(codeString);
                 const lang = match ? match[1].toLowerCase() : 'text';
 
                 if (lang === 'mermaid') {
@@ -415,34 +443,13 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                 }
 
                 return (
-                  <div className="my-5 rounded-lg overflow-hidden border border-neutral-800 bg-neutral-950 text-neutral-100 shadow-sm">
-                    <div className="flex items-center justify-between px-3.5 py-2 bg-neutral-900 border-b border-neutral-800 text-xs text-neutral-400">
-                      <span className="font-mono uppercase tracking-wider text-[11px] font-semibold text-neutral-400">
-                        {lang}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyCode(codeString, codeId)}
-                        className="flex items-center gap-1 text-[11px] hover:text-neutral-100 text-neutral-400 transition-colors focus-visible:ring-1 focus-visible:ring-neutral-400 rounded px-1"
-                        aria-label="Copy code to clipboard"
-                      >
-                        {copiedCodeId === codeId ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-400" />
-                            <span className="text-emerald-400">{t.chapter.copied}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3" />
-                            <span>{t.chapter.copy}</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    <pre className={fontConfig.preCode}>
-                      <HighlightedCode code={codeString} language={lang} />
-                    </pre>
-                  </div>
+                  <CodeBlock
+                    lang={lang}
+                    codeString={codeString}
+                    preClassName={fontConfig.preCode}
+                    copyLabel={t.chapter.copy}
+                    copiedLabel={t.chapter.copied}
+                  />
                 );
               }
 

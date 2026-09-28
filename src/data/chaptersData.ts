@@ -1,4 +1,5 @@
 import { Chapter, HeadingItem } from '../types';
+import { slugify } from '../utils/slug';
 
 // Load all markdown files at build time
 const markdownModules = import.meta.glob<string>(
@@ -83,8 +84,17 @@ export function extractHeadings(markdown: string): HeadingItem[] {
   const headings: HeadingItem[] = [];
   const lines = markdown.split('\n');
   const seenIds = new Set<string>();
+  let inFencedCodeBlock = false;
 
   for (const line of lines) {
+    // Skip fenced code blocks: a `#` line inside a fence is not a heading,
+    // and must not shift the ids observed by the rendered viewer.
+    if (/^(`{3,}|~{3,})/.test(line.trim())) {
+      inFencedCodeBlock = !inFencedCodeBlock;
+      continue;
+    }
+    if (inFencedCodeBlock) continue;
+
     const match = line.match(/^(#{1,3})\s+(.+)$/);
     if (match) {
       const level = match[1].length;
@@ -94,22 +104,12 @@ export function extractHeadings(markdown: string): HeadingItem[] {
       // Strip html tags
       title = title.replace(/<\/?[^>]+(>|$)/g, '');
 
-      // Generate a clean slug
-      let slug = title
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/\s+/g, '-');
-
-      if (!slug) slug = `heading-${headings.length}`;
-      let uniqueSlug = slug;
-      let counter = 1;
-      while (seenIds.has(uniqueSlug)) {
-        uniqueSlug = `${slug}-${counter++}`;
-      }
-      seenIds.add(uniqueSlug);
+      // Shared slugify with the rendered viewer (ChapterViewer) so that
+      // TOC anchor ids always match the heading element ids.
+      const id = slugify(title, { fallbackIndex: headings.length, seenIds });
 
       headings.push({
-        id: uniqueSlug,
+        id,
         title,
         level
       });
