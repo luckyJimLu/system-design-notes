@@ -171,9 +171,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Volume & Section Segmented Tabs */}
         <div className="p-2 border-b border-neutral-200/80 bg-neutral-50/60">
-          <div className="flex gap-1 p-0.5 bg-neutral-200/60 rounded-lg text-xs font-medium overflow-x-auto">
+          <div role="tablist" className="flex gap-1 p-0.5 bg-neutral-200/60 rounded-lg text-xs font-medium overflow-x-auto">
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'all'}
               onClick={() => setActiveTab('all')}
               className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'all'
@@ -186,6 +188,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'vol1'}
               onClick={() => setActiveTab('vol1')}
               className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'vol1'
@@ -198,6 +202,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'vol2'}
               onClick={() => setActiveTab('vol2')}
               className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'vol2'
@@ -210,6 +216,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'modem'}
               onClick={() => setActiveTab('modem')}
               className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'modem'
@@ -222,6 +230,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'tools'}
               onClick={() => setActiveTab('tools')}
               className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
                 activeTab === 'tools'
@@ -234,6 +244,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={activeTab === 'saved'}
               onClick={() => setActiveTab('saved')}
               className={`shrink-0 px-2 py-1 rounded-md transition-all flex items-center justify-center gap-1 ${
                 activeTab === 'saved'
@@ -276,6 +288,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <button
                     type="button"
+                    aria-current={isActive ? 'page' : undefined}
                     onClick={() => {
                       onSelectChapter(ch.id);
                       if (isOpenMobile) onCloseMobile();
@@ -311,8 +324,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           ? 'text-amber-600'
                           : 'text-neutral-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-neutral-700'
                       }`}
-                      aria-label={isBookmarked ? 'Remove Bookmark' : 'Bookmark Chapter'}
-                      title={isBookmarked ? 'Remove Bookmark' : 'Bookmark Chapter'}
+                      aria-label={isBookmarked ? (language === 'zh' ? '取消收藏' : 'Remove Bookmark') : (language === 'zh' ? '收藏章节' : 'Bookmark Chapter')}
+                      title={isBookmarked ? (language === 'zh' ? '取消收藏' : 'Remove Bookmark') : (language === 'zh' ? '收藏章节' : 'Bookmark Chapter')}
                     >
                       <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current' : ''}`} />
                     </button>
@@ -328,8 +341,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           ? 'text-emerald-600'
                           : 'text-neutral-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-neutral-700'
                       }`}
-                      aria-label={isCompleted ? 'Mark as Incomplete' : 'Mark as Read'}
-                      title={isCompleted ? 'Mark as Incomplete' : 'Mark as Read'}
+                      aria-label={isCompleted ? (language === 'zh' ? '标记未读' : 'Mark as Incomplete') : (language === 'zh' ? '标记已读' : 'Mark as Read')}
+                      title={isCompleted ? (language === 'zh' ? '标记未读' : 'Mark as Incomplete') : (language === 'zh' ? '标记已读' : 'Mark as Read')}
                     >
                       <CheckCircle2 className={`w-3.5 h-3.5 ${isCompleted ? 'fill-emerald-100' : ''}`} />
                     </button>

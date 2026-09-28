@@ -203,8 +203,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                   ? 'bg-amber-50 text-amber-800 border-amber-300'
                   : 'bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50'
               }`}
-              aria-label={isBookmarked ? 'Remove Bookmark' : 'Bookmark Chapter'}
-              title={isBookmarked ? 'Remove Bookmark' : 'Bookmark Chapter'}
+              aria-label={isBookmarked ? (language === 'zh' ? '取消收藏' : 'Remove Bookmark') : (language === 'zh' ? '收藏章节' : 'Bookmark Chapter')}
+              title={isBookmarked ? (language === 'zh' ? '取消收藏' : 'Remove Bookmark') : (language === 'zh' ? '收藏章节' : 'Bookmark Chapter')}
             >
               <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current text-amber-600' : 'text-neutral-400'}`} />
               <span>{isBookmarked ? t.chapter.bookmarked : t.chapter.bookmark}</span>
@@ -219,8 +219,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                   : 'bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50'
               }`}
-              aria-label={isCompleted ? 'Mark as Incomplete' : 'Mark as Read'}
-              title={isCompleted ? 'Mark as Incomplete' : 'Mark as Read'}
+              aria-label={isCompleted ? (language === 'zh' ? '标记未读' : 'Mark as Incomplete') : (language === 'zh' ? '标记已读' : 'Mark as Read')}
+              title={isCompleted ? (language === 'zh' ? '标记未读' : 'Mark as Incomplete') : (language === 'zh' ? '标记已读' : 'Mark as Read')}
             >
               <CheckCircle2
                 className={`w-3.5 h-3.5 ${isCompleted ? 'text-emerald-600' : 'text-neutral-400'}`}
@@ -478,7 +478,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
                         onOpenLightbox(resolvedSrc, alt);
                       }
                     }}
-                    aria-label={`Enlarge image: ${alt || 'System Architecture Diagram'}`}
+                    aria-label={language === 'zh' ? `点击放大：${alt || '系统架构图'}` : `Enlarge image: ${alt || 'System Architecture Diagram'}`}
                   >
                     <img
                       src={resolvedSrc}

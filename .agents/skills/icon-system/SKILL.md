@@ -3,7 +3,7 @@ name: icon-system
 description: Design, select, normalize, review, or refactor icons in a product UI. Use for navigation, actions, status, empty states, brand marks, icon-only controls, icon sizing/stroke/color rules, and icon-library decisions.
 metadata:
   category: ui
-  origin: aihome-skills
+  origin: migrated-and-generalized-from-aihome-agent
 ---
 
 # Icon System

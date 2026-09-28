@@ -60,7 +60,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
-      role="presentation"
+      aria-hidden="true"
     >
       <div
         id="cheatsheet-modal-container"
@@ -97,6 +97,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
           <div className="inline-flex rounded-lg bg-neutral-200/70 p-0.5 text-xs font-medium w-full sm:w-auto overflow-x-auto" role="tablist">
             <button
               type="button"
+              id="cheatsheet-tab-latency"
               role="tab"
               aria-selected={activeTab === 'latency'}
               aria-controls="cheatsheet-panel-latency"
@@ -112,6 +113,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
             </button>
             <button
               type="button"
+              id="cheatsheet-tab-power"
               role="tab"
               aria-selected={activeTab === 'power'}
               aria-controls="cheatsheet-panel-power"
@@ -127,6 +129,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
             </button>
             <button
               type="button"
+              id="cheatsheet-tab-availability"
               role="tab"
               aria-selected={activeTab === 'availability'}
               aria-controls="cheatsheet-panel-availability"
@@ -142,6 +145,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
             </button>
             <button
               type="button"
+              id="cheatsheet-tab-framework"
               role="tab"
               aria-selected={activeTab === 'framework'}
               aria-controls="cheatsheet-panel-framework"
@@ -161,7 +165,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
         {/* Tab Body */}
         <div className="flex-1 overflow-y-auto p-6 bg-white">
           {activeTab === 'latency' && (
-            <div id="cheatsheet-panel-latency" role="tabpanel" aria-label={t.tabs.latency} className="space-y-4">
+            <div id="cheatsheet-panel-latency" role="tabpanel" aria-labelledby="cheatsheet-tab-latency" className="space-y-4">
               <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 leading-relaxed">
                 <span className="font-semibold text-neutral-900">{language === 'zh' ? '核心要点：' : 'Key Takeaway:'}</span> {t.latencyTakeaway}
               </div>
@@ -196,7 +200,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
           )}
 
           {activeTab === 'power' && (
-            <div id="cheatsheet-panel-power" role="tabpanel" aria-label={t.tabs.power} className="space-y-4">
+            <div id="cheatsheet-panel-power" role="tabpanel" aria-labelledby="cheatsheet-tab-power" className="space-y-4">
               <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 leading-relaxed">
                 <span>{t.powerIntro}</span>
                 <div className="mt-1.5 flex flex-wrap gap-2 text-neutral-900 font-mono text-[11px]">
@@ -231,7 +235,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
           )}
 
           {activeTab === 'availability' && (
-            <div id="cheatsheet-panel-availability" role="tabpanel" aria-label={t.tabs.availability} className="space-y-4">
+            <div id="cheatsheet-panel-availability" role="tabpanel" aria-labelledby="cheatsheet-tab-availability" className="space-y-4">
               <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 leading-relaxed">
                 {t.availIntro}
               </div>
@@ -260,7 +264,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
           )}
 
           {activeTab === 'framework' && (
-            <div id="cheatsheet-panel-framework" role="tabpanel" aria-label={t.tabs.framework} className="space-y-4">
+            <div id="cheatsheet-panel-framework" role="tabpanel" aria-labelledby="cheatsheet-tab-framework" className="space-y-4">
               <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-700 leading-relaxed">
                 {t.frameworkIntro}
               </div>

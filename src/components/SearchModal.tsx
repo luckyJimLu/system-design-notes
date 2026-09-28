@@ -208,7 +208,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      role="presentation"
+      aria-hidden="true"
     >
       <div
         id="search-modal-container"
@@ -227,6 +227,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
             id="search-input"
             type="text"
             aria-label={language === 'zh' ? '搜索章节' : 'Search chapters'}
+            aria-autocomplete="list"
+            aria-activedescendant={results[selectedIndex] ? `search-item-${results[selectedIndex].chapter.id}` : undefined}
             placeholder={
               language === 'zh'
                 ? '搜索系统设计章节、架构模式、标签 (例如：限流、哈希、布隆过滤器、消息队列)...'
@@ -255,7 +257,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
         </div>
 
         {/* Results List */}
-        <div className="flex-1 overflow-y-auto p-2 divide-y divide-neutral-100">
+        <div role="listbox" aria-label={language === 'zh' ? '搜索结果' : 'Search results'} className="flex-1 overflow-y-auto p-2 divide-y divide-neutral-100">
           {results.length === 0 ? (
             <div className="py-12 text-center text-neutral-500 text-sm">
               {language === 'zh' ? (
@@ -274,6 +276,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 <button
                   key={ch.id}
                   id={`search-item-${ch.id}`}
+                  role="option"
+                  aria-selected={isSelected}
                   onClick={() => {
                     onSelectChapter(ch.id);
                     onClose();

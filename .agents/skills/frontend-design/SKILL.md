@@ -3,7 +3,7 @@ name: frontend-design
 description: Design, critique, polish, normalize, or substantially refactor a product frontend. Use for page layout, information hierarchy, typography, spacing, responsive structure, settings/admin/configuration pages, visual-system cleanup, and anti-generic UI review.
 metadata:
   category: ui
-  origin: aihome-skills
+  origin: migrated-and-generalized-from-aihome-agent
 ---
 
 # Frontend Design
@@ -80,16 +80,36 @@ Remove one layer of unnecessary containers before adding polish. A strong result
 
 ## Visual system
 
-Keep a small, intentional vocabulary for type scale, spacing rhythm, radius sizes, borders/elevation, neutral surfaces, primary accent, semantic states, icon sizes, and interaction states.
+Keep a small, intentional vocabulary for:
+
+- type scale and weights;
+- spacing rhythm;
+- radius sizes;
+- borders and elevation;
+- neutral surfaces;
+- primary accent;
+- semantic success/warning/error/info states;
+- icon sizes and interaction states.
 
 Use color for meaning, action, selection, or categorization. Do not use color alone for status.
 
 ## Content and localization resilience
 
-Stress important layouts with long identifiers, error messages, code-like strings, English/Chinese labels, loading/empty states, and narrow windows. Critical information must always have a recovery path when truncated.
+Stress important layouts with long identifiers, error messages, code-like strings, English/Chinese labels, loading/empty states, and narrow windows. Use wrapping, truncation, tooltips, overflow, and min-width rules deliberately. Critical information must always have a recovery path when truncated.
 
 ## Completion checklist
 
-Verify the primary task is obvious, grouping/alignment is intentional, secondary information is subordinate, important actions remain reachable at narrow widths, tables/forms preserve semantics, keyboard/focus behavior remains usable, localized content survives, backend semantics were not changed for styling convenience, and relevant build/type checks pass.
+Before declaring a substantial redesign complete, verify:
+
+- the primary task is obvious in the first viewport;
+- related elements are closer than unrelated elements;
+- major edges, baselines, control heights, and numeric columns align intentionally;
+- secondary information is visually subordinate;
+- important actions remain reachable at narrow widths;
+- tables/forms keep their semantics rather than becoming decorative cards;
+- focus-visible and keyboard behavior remain usable;
+- long/localized content does not break the layout;
+- no backend/business semantics were changed merely for styling convenience;
+- build/type checks relevant to the repository pass.
 
 Report changed files, design direction, major layout decisions, responsive/accessibility considerations, validation performed, and remaining visual debt.
