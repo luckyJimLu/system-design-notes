@@ -14,6 +14,10 @@ tags: [Developer Tools, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, C
 >
 > Updated: 2026-09-28
 
+## Jev and AI Gateway
+
+- [Jev with Cloudflare AI Gateway SOP](#/chapter/content-jev-cloudflare-ai-gateway): API smoke test, acceptance checks, and browser agent integration boundary.
+
 ## 1. Core operating model
 
 Treat OpenCode and Codex as constrained software engineers, not chatbots.
