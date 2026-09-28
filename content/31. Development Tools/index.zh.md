@@ -15,6 +15,10 @@ tags: [开发工具, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, CI/C
 > 整理日期：2026-09-28  
 > 资料来源：资料库中的 OpenCode / Oh My OpenAgent / Agent 架构文档，以及 OpenAI Codex 官方文档。
 
+## Jev 与 AI Gateway 实践入口
+
+- [Jev × Cloudflare AI Gateway 验证与接入 SOP](#/chapter/content-jev-cloudflare-ai-gateway)：Cloudflare 调用、最小烟测、验收记录和浏览器代理接入边界。
+
 ## 1. 先给结论
 
 OpenCode 与 Codex 都应被当作“受约束的软件工程师”，而不是聊天机器人。
