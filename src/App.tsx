@@ -276,6 +276,7 @@ export default function App() {
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        onOpen={() => setIsSearchOpen(true)}
         chapters={ALL_CHAPTERS}
         onSelectChapter={handleSelectChapter}
         language={language}

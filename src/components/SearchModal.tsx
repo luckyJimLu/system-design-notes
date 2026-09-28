@@ -6,6 +6,7 @@ import { truncateTitle } from '../utils/title';
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpen: () => void;
   chapters: Chapter[];
   onSelectChapter: (chapterId: string) => void;
   language?: Language;
@@ -14,6 +15,7 @@ interface SearchModalProps {
 export const SearchModal: React.FC<SearchModalProps> = ({
   isOpen,
   onClose,
+  onOpen,
   chapters,
   onSelectChapter,
   language = 'en'
@@ -42,13 +44,14 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         if (isOpen) onClose();
+        else onOpen();
       } else if (e.key === 'Escape' && isOpen) {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, onOpen]);
 
   // Filter results
   const results = useMemo(() => {
