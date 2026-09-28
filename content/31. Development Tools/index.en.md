@@ -3,6 +3,7 @@ id: development-tools-opencode-codex
 title: OpenCode and Codex Advanced Engineering Practice
 titleEn: Advanced Engineering with OpenCode and Codex
 order: 31
+category: developer-tools
 description: An engineering playbook for AI coding agents, tools, permissions, skills, MCP, subagents, GitHub, and CI/CD.
 tags: [Developer Tools, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, CI/CD]
 ---
