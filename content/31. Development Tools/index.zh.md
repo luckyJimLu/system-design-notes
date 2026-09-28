@@ -3,6 +3,7 @@ id: development-tools-opencode-codex
 title: OpenCode 与 Codex 高阶工程开发实战
 titleEn: Advanced Engineering with OpenCode and Codex
 order: 31
+category: developer-tools
 description: 面向真实代码仓库的 AI Coding Agent、工具链、权限、Skills、MCP、多 Agent 与工程闭环实践。
 tags: [开发工具, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, CI/CD]
 ---
