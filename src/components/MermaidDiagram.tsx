@@ -390,12 +390,12 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
     <>
       <div
         id={containerId}
-        className="my-7 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xs"
+        className="my-7 overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-2xs"
       >
         {/* Header Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 select-none">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600 select-none">
           {/* View Mode Switcher */}
-          <div className="inline-flex rounded-md border border-slate-200 bg-white p-0.5 text-xs font-medium" role="tablist">
+          <div className="inline-flex rounded-md border border-neutral-200 bg-white p-0.5 text-xs font-medium" role="tablist">
             <button
               type="button"
               role="tab"
@@ -403,8 +403,8 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
               onClick={() => setViewMode('diagram')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all ${
                 viewMode === 'diagram'
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-neutral-900 text-white font-semibold'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
@@ -417,8 +417,8 @@ export const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ code, language =
               onClick={() => setViewMode('code')}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all ${
                 viewMode === 'code'
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-neutral-900 text-white font-semibold'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <Code className="w-3.5 h-3.5" />

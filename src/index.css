@@ -115,22 +115,22 @@
   min-height: 28px;
   padding: 4px;
   border-radius: 6px;
-  color: #475569;
+  color: #525252;
   cursor: pointer;
   transition: color 150ms ease, background-color 150ms ease;
 }
 
 .mermaid-tool-button:hover {
-  color: #0f172a;
-  background: #e2e8f0;
+  color: #171717;
+  background: #e5e5e5;
 }
 
 .mermaid-tool-button:active {
-  background: #cbd5e1;
+  background: #d4d4d4;
 }
 
 .mermaid-tool-button:disabled {
-  color: #cbd5e1;
+  color: #d4d4d4;
   cursor: not-allowed;
   background: transparent;
 }

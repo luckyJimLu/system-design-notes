@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Menu, Search, Sparkles, Languages } from 'lucide-react';
+import { Menu, Search, BookMarked, Languages } from 'lucide-react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
 import { truncateTitle } from '../utils/title';
@@ -114,7 +114,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Font Size Selector */}
           <div
-            className="flex items-center bg-neutral-100 p-0.5 rounded-md border border-neutral-200/80"
+            className="hidden sm:flex items-center bg-neutral-100 p-0.5 rounded-md border border-neutral-200/80"
             role="group"
             aria-label="Font size controls"
           >
@@ -174,7 +174,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title={t.navbar.cheatSheet}
             aria-label={t.navbar.cheatSheet}
           >
-            <Sparkles className="w-3.5 h-3.5 text-neutral-600" />
+            <BookMarked className="w-3.5 h-3.5 text-neutral-600" />
             <span className="hidden md:inline">{t.navbar.cheatSheet}</span>
           </button>
 

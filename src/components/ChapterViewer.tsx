@@ -19,7 +19,6 @@ import {
   Maximize2,
   ArrowLeft,
   ArrowRight,
-  Sparkles,
   ExternalLink,
 } from 'lucide-react';
 
@@ -165,7 +164,8 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
   // Heading ids must match extractHeadings output (used by TableOfContents),
   // so both go through the shared slugify in utils/slug.
   const fullCurrentTitle = language === 'zh' ? (chapter.titleZh || chapter.title) : chapter.title;
-  const currentTitle = truncateTitle(fullCurrentTitle);
+  // h1 shows the full title with natural wrapping; truncation is only for compact UI (Navbar, sidebar)
+  const currentTitle = fullCurrentTitle;
   const currentDesc = language === 'zh' ? (chapter.descriptionZh || chapter.description) : chapter.description;
   const currentTags = language === 'zh' ? (chapter.tagsZh || chapter.tags) : chapter.tags;
 
@@ -527,7 +527,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-0.5" />
               {t.chapter.prevChapter}
             </span>
-            <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-blue-700 transition-colors">
+            <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-neutral-600 transition-colors">
               {prevChapter.volume !== 0 ? (language === 'zh' ? `第${prevChapter.number}章: ` : `Ch ${prevChapter.number}: `) : ''}
               {truncateTitle(language === 'zh' ? (prevChapter.titleZh || prevChapter.title) : prevChapter.title)}
             </span>
@@ -547,7 +547,7 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
               {t.chapter.nextChapter}
               <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
             </span>
-            <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-blue-700 transition-colors">
+            <span className="block text-sm font-semibold text-neutral-900 mt-1 line-clamp-1 group-hover:text-neutral-600 transition-colors">
               {nextChapter.volume !== 0 ? (language === 'zh' ? `第${nextChapter.number}章: ` : `Ch ${nextChapter.number}: `) : ''}
               {truncateTitle(language === 'zh' ? (nextChapter.titleZh || nextChapter.title) : nextChapter.title)}
             </span>

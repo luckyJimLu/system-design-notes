@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
 import { truncateTitle } from '../utils/title';
@@ -7,6 +7,7 @@ import {
   Bookmark,
   Layers,
   FileText,
+  ChevronLeft,
   ChevronRight,
   X,
 } from 'lucide-react';
@@ -24,6 +25,8 @@ interface SidebarProps {
   isOpenMobile: boolean;
   onCloseMobile: () => void;
   language: Language;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -38,33 +41,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCurrentViewResources,
   isOpenMobile,
   onCloseMobile,
-  language
+  language,
+  isCollapsed = false,
+  onToggleCollapsed,
 }) => {
   const [activeTab, setActiveTab] = useState<'all' | 'vol1' | 'vol2' | 'modem' | 'tools' | 'saved'>('all');
-  const [isDesktopVisible, setIsDesktopVisible] = useState(false);
-  const sidebarRef = useRef<HTMLElement>(null);
-  const hideTimerRef = useRef<number | null>(null);
   const t = I18N_STRINGS[language];
-
-  const showDesktopSidebar = () => {
-    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
-    setIsDesktopVisible(true);
-  };
-
-  const hideDesktopSidebarSoon = () => {
-    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = window.setTimeout(() => {
-      const activeElement = document.activeElement;
-      if (!sidebarRef.current?.contains(activeElement)) setIsDesktopVisible(false);
-    }, 280);
-  };
-
-  useEffect(() => {
-    if (sidebarRef.current) sidebarRef.current.inert = !isDesktopVisible && !isOpenMobile;
-    return () => {
-      if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
-    };
-  }, [isDesktopVisible, isOpenMobile]);
 
   // Filter chapters based on active tab
   const filteredChapters = chapters.filter(c => {
@@ -97,52 +79,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      <button
-        type="button"
-        onMouseEnter={showDesktopSidebar}
-        onFocus={showDesktopSidebar}
-        onClick={showDesktopSidebar}
-        className="fixed left-0 top-1/2 z-30 hidden h-20 w-3 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-neutral-200 bg-white/90 text-neutral-400 shadow-sm transition-colors hover:text-neutral-900 focus-visible:flex lg:flex"
-        aria-label={language === 'zh' ? '显示章节导航' : 'Show chapter navigation'}
-        title={language === 'zh' ? '显示章节导航' : 'Show chapter navigation'}
-      >
-        <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-
       {/* Sidebar Container */}
       <aside
-        ref={sidebarRef}
         id="left-navigation-rail"
         aria-label={t.appTitle}
-        onMouseEnter={showDesktopSidebar}
-        onMouseLeave={hideDesktopSidebarSoon}
-        onFocus={showDesktopSidebar}
-        onBlur={event => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) hideDesktopSidebarSoon();
-        }}
-        aria-hidden={!isOpenMobile && !isDesktopVisible}
-        className={`fixed top-0 bottom-0 left-0 z-40 w-72 sm:w-80 bg-white border-r border-neutral-200 flex flex-col transition-transform duration-200 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-0 z-40 bg-white border-r border-neutral-200 flex flex-col transition-all duration-200 ease-in-out ${
           isOpenMobile
-            ? 'translate-x-0 shadow-xl'
-            : isDesktopVisible
-              ? '-translate-x-full lg:translate-x-0'
-              : '-translate-x-full'
+            ? 'translate-x-0 w-72 sm:w-80 shadow-xl'
+            : isCollapsed
+              ? '-translate-x-full lg:translate-x-0 lg:w-14'
+              : '-translate-x-full lg:translate-x-0 lg:w-72'
         }`}
       >
         {/* Brand Header */}
-        <div className="p-4 border-b border-neutral-200/90 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs tracking-wider">
+        <div className="p-3 sm:p-4 border-b border-neutral-200/90 flex items-center justify-between bg-white h-14">
+          <div className={`flex items-center gap-2.5 overflow-hidden ${isCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
+            <div className="w-8 h-8 rounded-lg bg-neutral-900 text-white flex items-center justify-center font-bold text-xs tracking-wider shrink-0">
               <Layers className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <h1 className="text-sm font-semibold text-neutral-900 leading-tight">
-                {t.appTitle}
-              </h1>
-              <p className="text-[11px] text-neutral-500 font-medium">{t.appSubtitle}</p>
-            </div>
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <h1 className="text-sm font-semibold text-neutral-900 leading-tight truncate">
+                  {t.appTitle}
+                </h1>
+                <p className="text-[11px] text-neutral-500 font-medium truncate">{t.appSubtitle}</p>
+              </div>
+            )}
           </div>
 
+          {/* Desktop collapse toggle button */}
+          {onToggleCollapsed && !isCollapsed && (
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              className="hidden lg:flex p-1.5 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors focus-visible:ring-2 focus-visible:ring-neutral-900"
+              aria-label={language === 'zh' ? '折叠导航栏' : 'Collapse navigation'}
+              title={language === 'zh' ? '折叠导航栏' : 'Collapse navigation'}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Desktop expand button when collapsed */}
+          {onToggleCollapsed && isCollapsed && (
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              className="hidden lg:flex p-1 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors focus-visible:ring-2 focus-visible:ring-neutral-900 absolute right-2 top-3.5"
+              aria-label={language === 'zh' ? '展开导航栏' : 'Expand navigation'}
+              title={language === 'zh' ? '展开导航栏' : 'Expand navigation'}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Mobile close button */}
           <button
             type="button"
             onClick={onCloseMobile}
@@ -154,120 +145,125 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Reading Progress Indicator */}
-        <div className="px-4 py-2 bg-white border-b border-neutral-100">
-          <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1.5">
-            <span>{t.readingProgress}</span>
-            <span className="font-semibold text-neutral-900 font-mono">
-              {completedCount}/{chapters.length} ({progressPercent}%)
-            </span>
+        {!isCollapsed && (
+          <div className="px-4 py-2 bg-white border-b border-neutral-100">
+            <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1.5">
+              <span>{t.readingProgress}</span>
+              <span className="font-semibold text-neutral-900 font-mono">
+                {completedCount}/{chapters.length} ({progressPercent}%)
+              </span>
+            </div>
+            <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-neutral-900 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
           </div>
-          <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-neutral-900 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-        </div>
+        )}
 
-        {/* Volume & Section Segmented Tabs */}
-        <div className="p-2 border-b border-neutral-200/80 bg-neutral-50/60">
-          <div role="tablist" className="flex gap-1 p-0.5 bg-neutral-200/60 rounded-lg text-xs font-medium overflow-x-auto">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'all'}
-              onClick={() => setActiveTab('all')}
-              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                activeTab === 'all'
-                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-              title={`${t.tabs.all} (${chapters.length})`}
-            >
-              <span className="truncate">{t.tabs.all}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'vol1'}
-              onClick={() => setActiveTab('vol1')}
-              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                activeTab === 'vol1'
-                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-              title={`${t.tabs.vol1} (${vol1Count})`}
-            >
-              <span>{t.tabs.vol1}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'vol2'}
-              onClick={() => setActiveTab('vol2')}
-              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                activeTab === 'vol2'
-                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-              title={`${t.tabs.vol2} (${vol2Count})`}
-            >
-              <span>{t.tabs.vol2}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'modem'}
-              onClick={() => setActiveTab('modem')}
-              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                activeTab === 'modem'
-                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-              title={`${t.tabs.modem} (${modemCount})`}
-            >
-              <span>{t.tabs.modem}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'tools'}
-              onClick={() => setActiveTab('tools')}
-              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                activeTab === 'tools'
-                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-              title={`${t.tabs.developerTools} (${developerToolsCount})`}
-            >
-              <span className="truncate">{t.tabs.developerTools}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'saved'}
-              onClick={() => setActiveTab('saved')}
-              className={`shrink-0 px-2 py-1 rounded-md transition-all flex items-center justify-center gap-1 ${
-                activeTab === 'saved'
-                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-              title={`${t.tabs.saved} (${bookmarks.size})`}
-            >
-              <Bookmark className="w-3 h-3 fill-current" />
-              <span>{bookmarks.size}</span>
-            </button>
+        {!isCollapsed && (
+          <div className="p-2 border-b border-neutral-200/80 bg-neutral-50/60">
+            <div role="tablist" className="flex gap-1 p-0.5 bg-neutral-200/60 rounded-lg text-xs font-medium overflow-x-auto">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'all'}
+                onClick={() => setActiveTab('all')}
+                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
+                  activeTab === 'all'
+                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+                title={`${t.tabs.all} (${chapters.length})`}
+              >
+                <span className="truncate">{t.tabs.all}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'vol1'}
+                onClick={() => setActiveTab('vol1')}
+                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
+                  activeTab === 'vol1'
+                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+                title={`${t.tabs.vol1} (${vol1Count})`}
+              >
+                <span>{t.tabs.vol1}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'vol2'}
+                onClick={() => setActiveTab('vol2')}
+                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
+                  activeTab === 'vol2'
+                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+                title={`${t.tabs.vol2} (${vol2Count})`}
+              >
+                <span>{t.tabs.vol2}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'modem'}
+                onClick={() => setActiveTab('modem')}
+                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
+                  activeTab === 'modem'
+                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+                title={`${t.tabs.modem} (${modemCount})`}
+              >
+                <span>{t.tabs.modem}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'tools'}
+                onClick={() => setActiveTab('tools')}
+                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
+                  activeTab === 'tools'
+                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+                title={`${t.tabs.developerTools} (${developerToolsCount})`}
+              >
+                <span className="truncate">{t.tabs.developerTools}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'saved'}
+                onClick={() => setActiveTab('saved')}
+                className={`shrink-0 px-2 py-1 rounded-md transition-all flex items-center justify-center gap-1 ${
+                  activeTab === 'saved'
+                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                    : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+                title={`${t.tabs.saved} (${bookmarks.size})`}
+              >
+                <Bookmark className="w-3 h-3 fill-current" />
+                <span>{bookmarks.size}</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Chapter List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+        <div className={`flex-1 overflow-y-auto space-y-0.5 ${isCollapsed ? 'p-1.5' : 'p-2'}`}>
           {filteredChapters.length === 0 ? (
-            <div className="py-12 text-center text-xs text-neutral-400">
-              {activeTab === 'saved'
-                ? t.sidebar.noSaved
-                : t.sidebar.noMatches}
-            </div>
+            !isCollapsed ? (
+              <div className="py-12 text-center text-xs text-neutral-400">
+                {activeTab === 'saved'
+                  ? t.sidebar.noSaved
+                  : t.sidebar.noMatches}
+              </div>
+            ) : null
           ) : (
             filteredChapters.map(ch => {
               const isActive = !isCurrentViewResources && currentChapterId === ch.id;
@@ -275,6 +271,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
               const isBookmarked = bookmarks.has(ch.id);
               const fullTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
               const chTitle = truncateTitle(fullTitle);
+
+              if (isCollapsed) {
+                return (
+                  <div key={ch.id} className="relative flex justify-center py-1">
+                    <button
+                      type="button"
+                      aria-current={isActive ? 'page' : undefined}
+                      onClick={() => {
+                        onSelectChapter(ch.id);
+                        if (isOpenMobile) onCloseMobile();
+                      }}
+                      title={`${ch.number}. ${fullTitle}`}
+                      className={`w-8 h-8 rounded-md flex items-center justify-center font-mono text-xs font-semibold transition-all relative group focus-visible:ring-2 focus-visible:ring-neutral-900 ${
+                        isActive
+                          ? 'bg-neutral-900 text-white shadow-xs'
+                          : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                      }`}
+                    >
+                      {ch.number}
+                      {/* Sub-dot for bookmark / completion status */}
+                      {isBookmarked && (
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500" />
+                      )}
+                      {!isBookmarked && isCompleted && (
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500" />
+                      )}
+                    </button>
+                  </div>
+                );
+              }
 
               return (
                 <div
@@ -354,7 +380,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Secondary navigation */}
-        <div className="p-3 border-t border-neutral-200 bg-neutral-50/50">
+        <div className={`border-t border-neutral-200 bg-neutral-50/50 ${isCollapsed ? 'p-2 flex justify-center' : 'p-3'}`}>
           <button
             id="sidebar-resources-btn"
             type="button"
@@ -362,19 +388,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onOpenResources();
               if (isOpenMobile) onCloseMobile();
             }}
-            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-md transition-colors border group focus-visible:ring-2 focus-visible:ring-neutral-900 ${
+            title={t.sidebar.resourcesBtn}
+            className={`flex items-center rounded-md transition-colors border group focus-visible:ring-2 focus-visible:ring-neutral-900 ${
+              isCollapsed
+                ? 'w-9 h-9 justify-center p-0'
+                : 'w-full justify-between px-3 py-2 text-xs font-medium'
+            } ${
               isCurrentViewResources
                 ? 'bg-neutral-900 text-white border-neutral-900'
                 : 'text-neutral-800 bg-white border-neutral-200 hover:bg-neutral-50'
             }`}
           >
-            <span className="flex items-center gap-2">
+            <span className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2'}`}>
               <FileText className={`w-3.5 h-3.5 ${isCurrentViewResources ? 'text-white' : 'text-neutral-700'}`} />
-              <span>{t.sidebar.resourcesBtn}</span>
+              {!isCollapsed && <span>{t.sidebar.resourcesBtn}</span>}
             </span>
-            <span className={`text-[10px] ${isCurrentViewResources ? 'text-neutral-300' : 'text-neutral-400'}`}>
-              {t.sidebar.resourcesCount}
-            </span>
+            {!isCollapsed && (
+              <span className={`text-[10px] ${isCurrentViewResources ? 'text-neutral-300' : 'text-neutral-400'}`}>
+                {t.sidebar.resourcesCount}
+              </span>
+            )}
           </button>
         </div>
       </aside>

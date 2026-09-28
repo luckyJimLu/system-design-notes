@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Clock, HardDrive, ShieldCheck, Compass } from 'lucide-react';
+import { X, Clock, HardDrive, ShieldCheck, ListChecks } from 'lucide-react';
 import { Language } from '../types';
 import {
   POWER_OF_TWO,
@@ -156,7 +156,7 @@ export const CheatSheetModal: React.FC<CheatSheetModalProps> = ({ isOpen, onClos
                   : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              <Compass className="w-3.5 h-3.5" />
+              <ListChecks className="w-3.5 h-3.5" />
               {t.tabs.framework}
             </button>
           </div>

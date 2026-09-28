@@ -105,6 +105,24 @@ export default function App() {
     }
   });
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('sys_design_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleSidebarCollapsed = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sys_design_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   // Modal and drawer states
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCheatSheetOpen, setIsCheatSheetOpen] = useState(false);
@@ -214,10 +232,12 @@ export default function App() {
         isOpenMobile={isOpenMobileSidebar}
         onCloseMobile={() => setIsOpenMobileSidebar(false)}
         language={language}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapsed={handleToggleSidebarCollapsed}
       />
 
       {/* Main Content Area */}
-      <div className="lg:pl-72 flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 transition-[padding] duration-200 ${isSidebarCollapsed ? 'lg:pl-14' : 'lg:pl-72'}`}>
         {/* Sticky Header Navbar */}
         <Navbar
           onToggleMobileSidebar={() => setIsOpenMobileSidebar(prev => !prev)}

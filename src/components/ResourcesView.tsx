@@ -57,6 +57,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
         case 'paper': return '学术论文';
         case 'blog': return '工程博客';
         case 'code': return '源码/仓库';
+        case 'video': return '技术演讲';
         default: return type;
       }
     }
@@ -96,6 +97,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
           <input
             type="text"
             placeholder={t.searchPlaceholder}
+            aria-label={language === 'zh' ? '搜索参考资料' : 'Search resources'}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-neutral-900"
@@ -106,6 +108,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
           <select
             value={selectedTopic}
             onChange={e => setSelectedTopic(e.target.value)}
+            aria-label={language === 'zh' ? '主题分类' : 'Topics'}
             className="text-xs bg-white border border-neutral-200 rounded-md px-2.5 py-2 text-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-900"
           >
             <option value="all">{t.allTopics}</option>
@@ -114,11 +117,13 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
             ))}
           </select>
 
-          <div className="flex items-center bg-neutral-200/70 p-0.5 rounded-md text-xs">
+          <div className="flex items-center bg-neutral-200/70 p-0.5 rounded-md text-xs" role="tablist" aria-label={language === 'zh' ? '资料类型' : 'Resource types'}>
             {['all', 'paper', 'blog', 'code'].map(type => (
               <button
                 key={type}
                 type="button"
+                role="tab"
+                aria-selected={selectedType === type}
                 onClick={() => setSelectedType(type)}
                 className={`px-2.5 py-1 rounded text-xs transition-all ${
                   selectedType === type
@@ -132,6 +137,13 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
           </div>
         </div>
       </div>
+
+      {/* Result count indicator */}
+      {filtered.length > 0 && (
+        <div className="text-xs text-neutral-500 mb-3 px-1">
+          {language === 'zh' ? `共 ${filtered.length} 篇参考资料` : `${filtered.length} resources found`}
+        </div>
+      )}
 
       {/* Resources Grid */}
       <div className="grid gap-3.5 sm:grid-cols-2">
@@ -154,7 +166,7 @@ export const ResourcesView: React.FC<ResourcesViewProps> = ({ onBackToChapters, 
                 </div>
               </div>
 
-              <h3 className="text-sm font-semibold text-neutral-900 group-hover:text-blue-700 transition-colors line-clamp-2">
+              <h3 className="text-sm font-semibold text-neutral-900 group-hover:text-neutral-600 transition-colors line-clamp-2">
                 {item.title}
               </h3>
 
