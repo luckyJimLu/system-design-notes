@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   language
 }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'vol1' | 'vol2' | 'modem' | 'saved'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'vol1' | 'vol2' | 'modem' | 'tools' | 'saved'>('all');
   const [isDesktopVisible, setIsDesktopVisible] = useState(false);
   const sidebarRef = useRef<HTMLElement>(null);
   const hideTimerRef = useRef<number | null>(null);
@@ -71,6 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (activeTab === 'vol1' && c.volume !== 1) return false;
     if (activeTab === 'vol2' && c.volume !== 2) return false;
     if (activeTab === 'modem' && c.volume !== 0) return false;
+    if (activeTab === 'tools' && c.category !== 'developer-tools') return false;
     if (activeTab === 'saved' && !bookmarks.has(c.id)) return false;
     return true;
   });
@@ -83,6 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const vol1Count = chapters.filter(c => c.volume === 1).length;
   const vol2Count = chapters.filter(c => c.volume === 2).length;
   const modemCount = chapters.filter(c => c.volume === 0).length;
+  const developerToolsCount = chapters.filter(c => c.category === 'developer-tools').length;
 
   return (
     <>
@@ -217,6 +219,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               title={`${t.tabs.modem} (${modemCount})`}
             >
               <span>{t.tabs.modem}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('tools')}
+              className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
+                activeTab === 'tools'
+                  ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+              title={`${t.tabs.developerTools} (${developerToolsCount})`}
+            >
+              <span className="truncate">{t.tabs.developerTools}</span>
             </button>
             <button
               type="button"
