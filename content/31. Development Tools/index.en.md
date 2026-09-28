@@ -1,7 +1,7 @@
 ---
 id: development-tools-opencode-codex
 title: OpenCode and Codex Advanced Engineering Practice
-titleEn: OpenCode and Codex Advanced Engineering Practice
+titleEn: Advanced Engineering with OpenCode and Codex
 order: 31
 description: An engineering playbook for AI coding agents, tools, permissions, skills, MCP, subagents, GitHub, and CI/CD.
 tags: [Developer Tools, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, CI/CD]
@@ -183,13 +183,40 @@ Record audience, prerequisites, version/date, official links, verified versus in
 | `aihome-skills` | Skill metadata, triggers, provenance, version audits |
 | `aihome-agent` | Agent routing, task contracts, permissions, delivery templates |
 
-## 9. Definition of done
+## 9. Common failure patterns
+
+| Pattern | Root cause | Fix |
+| --- | --- | --- |
+| Agent modifies unrelated files | Scope not defined | Specify allowed directories and forbidden changes |
+| Claims "tests passed" with no output | No real verification required | Require command, exit code, and summary |
+| MCP servers keep growing | Treating tool count as capability | Enable per task, isolate by permission |
+| Subagents overwrite each other | Shared workspace writes | Read-only in parallel; use worktrees for writes |
+| Uses stale platform APIs | Treating old docs as truth | Current official docs and a small PoC |
+| Agent loops indefinitely | No stopping condition | Set milestones, budget, max retries, and escalation |
+| Docs drift from code | Docs not in CI | Validate links, examples, commands, and front matter |
+| Production access granted directly | Trust boundary unclear | Default sandbox and approval; separate approval for production |
+
+## 10. Definition of done
 
 A task is complete only when scope is clear, project guidance was read, the change is explainable, at least one real verification was run, important paths have regression coverage or an explicit reason, the diff contains no unrelated changes, secrets were not exposed, and remaining risks are documented.
 
-## 10. References
+## 11. References
+
+### OpenCode
 
 - [OpenCode documentation](https://opencode.ai/docs)
+- [Config](https://opencode.ai/docs/config)
+- [Agents](https://opencode.ai/docs/agents)
+- [Commands](https://opencode.ai/docs/commands)
+- [Skills](https://opencode.ai/docs/skills)
+- [Tools](https://opencode.ai/docs/tools)
+- [Custom Tools](https://opencode.ai/docs/custom-tools)
+- [MCP Servers](https://opencode.ai/docs/mcp-servers)
+- [Plugins](https://opencode.ai/docs/plugins)
+- [CLI](https://opencode.ai/docs/cli)
+
+### Codex
+
 - [Codex CLI](https://developers.openai.com/codex/cli)
 - [Codex prompting and workflows](https://learn.chatgpt.com/docs/prompting)
 - [Codex best practices](https://learn.chatgpt.com/guides/best-practices)
@@ -198,3 +225,5 @@ A task is complete only when scope is clear, project guidance was read, the chan
 - [MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
 - [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
 - [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
+
+> Platform commands and configuration may change with new versions. For current behavior, refer to the official documentation and the current CLI `--help` output.
