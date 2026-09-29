@@ -6,6 +6,7 @@ Pinned source commit: `8f0e996c9d71f1a015743a2bab2a8171ad26ba2a`
 
 Project-local copies:
 
+- `embedded-diagram-and-code`
 - `frontend-design`
 - `icon-system`
 - `react-best-practices`

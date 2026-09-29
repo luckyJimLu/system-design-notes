@@ -7,6 +7,7 @@ does not reliably auto-discover that directory, so load the relevant skill
 manually before performing a task that matches it:
 
 - `.agents/skills/diagram-design/SKILL.md` — diagrams and visual system design
+- `.agents/skills/embedded-diagram-and-code/SKILL.md` — PlantUML diagrams and code highlighting for technical/embedded docs
 - `.agents/skills/frontend-design/SKILL.md` — frontend visual/product design
 - `.agents/skills/icon-system/SKILL.md` — product UI icon systems
 - `.agents/skills/react-best-practices/SKILL.md` — React + TypeScript structure
