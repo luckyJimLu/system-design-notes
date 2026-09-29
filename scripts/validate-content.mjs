@@ -54,6 +54,58 @@ const ids = new Map();
 const orders = new Map();
 const locales = new Map();
 
+// PlantUML must be authored as committed image assets, not embedded code:
+//   content/<chapter>/images/<name>.puml  ->  content/<chapter>/images/<name>.svg
+// and referenced from markdown as ![](images/<name>.svg).
+function validateNoPlantUmlFences(path, source) {
+  const fence = /```([^\n`]*)\n([\s\S]*?)```/g;
+  let match;
+  while ((match = fence.exec(source))) {
+    const language = match[1].trim().split(/\s+/)[0].toLowerCase();
+    const code = match[2];
+    if (
+      ['plantuml', 'puml', 'uml'].includes(language) ||
+      /^@start(?:uml|mindmap|wbs|gantt|json|yaml)\b/i.test(code.trim())
+    ) {
+      const line = source.slice(0, match.index).split('\n').length;
+      errors.push(
+        `${relative(process.cwd(), path)}:${line}: embedded PlantUML code block is not allowed; ` +
+        `save the diagram as content/<chapter>/images/<name>.puml, run 'npm run render:diagrams', ` +
+        `and reference ![](images/<name>.svg) instead`,
+      );
+    }
+  }
+}
+
+function validateDiagramAssets() {
+  const queue = [contentRoot];
+  while (queue.length > 0) {
+    const dir = queue.pop();
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        queue.push(path);
+        continue;
+      }
+      if (!/\.svg$/i.test(entry.name)) continue;
+      const svgPath = path;
+      const pumlPath = svgPath.replace(/\.svg$/i, '.puml');
+      if (!existsSync(pumlPath)) {
+        errors.push(
+          `${relative(process.cwd(), svgPath)}: rendered diagram has no matching .puml source; ` +
+          `every committed diagram image must have an editable .puml source next to it`,
+        );
+        continue;
+      }
+      if (statSync(pumlPath).mtimeMs > statSync(svgPath).mtimeMs) {
+        warnings.push(
+          `${relative(process.cwd(), svgPath)}: .puml source is newer than the .svg; run 'npm run render:diagrams'`,
+        );
+      }
+    }
+  }
+}
+
 for (const path of documents) {
   const relativePath = relative(process.cwd(), path);
   const source = readFileSync(path, 'utf8');
@@ -90,11 +142,16 @@ for (const path of documents) {
   locales.set(localeKey, pair);
 
   validateImageReferences(path, source);
+  validateNoPlantUmlFences(path, source);
 }
 
 for (const path of legacyDocuments) {
-  validateImageReferences(path, readFileSync(path, 'utf8'));
+  const source = readFileSync(path, 'utf8');
+  validateImageReferences(path, source);
+  validateNoPlantUmlFences(path, source);
 }
+
+validateDiagramAssets();
 
 for (const [id, pair] of locales) {
   if (!pair.has('zh') || !pair.has('en')) warnings.push(`content '${id}' is missing a ${pair.has('zh') ? 'en' : 'zh'} locale`);

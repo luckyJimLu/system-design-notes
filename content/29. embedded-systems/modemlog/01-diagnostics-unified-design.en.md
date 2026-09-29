@@ -35,40 +35,7 @@ For C++ implementation, please combine [C++ overall architecture and interaction
 ## 3. End-to-end architecture
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "Modem 日志服务" as modemLog
-rectangle "MCU ModemLog Socket" as logSocket
-rectangle "Modem CHR服务" as modemChr
-rectangle "MCU CHR Socket" as chrSocket
-rectangle "Socket Reactor" as reactor
-rectangle "ModemLog 专用块环" as logRing
-rectangle "CHR 专用消息块环" as chrRing
-rectangle "正常 lwIP RX / TX" as net
-rectangle "有界只读 Capture Tap" as tap
-rectangle "原始业务路径继续" as normal
-rectangle "私有 RX / TX 抓包环" as cap
-rectangle "唯一 Storage Owner" as storage
-rectangle "日志文件、CHR文件、PCAP文件" as files
-
-modemLog --> logSocket
-modemChr --> chrSocket
-logSocket --> reactor
-chrSocket --> reactor
-reactor --> logRing
-reactor --> chrRing
-net --> tap
-tap --> normal
-tap ..> cap : 尽力复制
-logRing --> storage
-chrRing --> storage
-cap --> storage
-storage --> files
-@enduml
-```
+![3. End-to-end architecture](images/cgqesn.svg)
 
 
 The solid line represents the data processing path; the dotted line in the packet capture only copies an independent copy and does not transfer the ownership of the original packet. Network reception must continue to use the original netif input/tcpip_input, and TCP packets cannot be directly used as Socket log bytes to be written to disk. lwIP has its own core thread and API thread constraints under operating system configuration. [^1][^5]
@@ -93,30 +60,7 @@ Use lwIP select plus non-blocking recv/send. "Blocking recv(log), then blocking 
 It is recommended that a loop first processes stop/control commands, and then gives CHR and ModemLog a limited read budget respectively. CHR priority is only the default policy, which does not mean that CHR has been confirmed to be the highest level of importance. Set the maximum total number of bytes, maximum number of cycles and CPU time in each round; actively block a tick if necessary. On a single core, taskYIELD does not guarantee that lower priority tasks will get the CPU.
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "处理控制与停止请求" as control
-rectangle "按空闲配额重建 fd集合" as sets
-rectangle "select 有限超时" as wait
-rectangle "CHR 就绪则有限读取" as chr
-rectangle "ModemLog 就绪则有限读取" as log
-rectangle "保存分帧状态并发布块" as parse
-rectangle "通知 Storage" as notify
-rectangle "检查CPU预算和停止状态" as budget
-
-control --> sets
-sets --> wait
-wait --> chr
-chr --> log
-log --> parse
-parse --> notify
-notify --> budget
-budget --> control
-@enduml
-```
+![4.1 Reception strategy](images/wd1p38.svg)
 
 
 The interface sketch is as follows. The auxiliary functions need to be implemented and verified in the project; it is not a complete program that can be directly compiled.
@@ -210,37 +154,7 @@ By default, a bounded copy is performed: caplen=min(original_length,snaplen), wh
 ### 6.2 Hot path sequence
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "原包到达观察点" as packet
-rectangle "启用且在范围内？" as enabled
-rectangle "原路径继续" as pass
-rectangle "过滤及包率字节预算通过？" as budget
-rectangle "立即取得私有槽？" as slot
-rectangle "仅增加抓包drop" as drop
-rectangle "限长限链段只读复制" as copy
-rectangle "快照完整？" as valid
-rectangle "归还未发布槽并记drop" as discard
-rectangle "release发布槽并通知Storage" as publish
-
-packet --> enabled
-enabled --> pass : 否
-enabled --> budget : 是
-budget --> pass : 否
-budget --> slot : 是
-slot --> drop : 否
-slot --> copy : 是
-copy --> valid
-valid --> discard : 否
-valid --> publish : 是
-drop --> pass
-discard --> pass
-publish --> pass
-@enduml
-```
+![6.2 Hot path sequence](images/1p1sm3n.svg)
 
 
 Packet rate budget and byte budget are indispensable. Initially, short filtering such as interface/direction/protocol is performed; when parsing IPv4 variable headers, IPv6 extension headers, fragments and VLANs, there are length checks and upper layer limits. Unable to determine the port's fragmentation/extra-long header, snapshots are clearly received or lost according to the configuration, without out-of-bounds guessing. The full promiscuous mode is turned off by default to avoid expanding the normal RX load for diagnosis.
@@ -295,27 +209,7 @@ Reactor directly writes Log/CHR into the corresponding production slot; tap dire
 Storage can batch serialize packet capture records into its own exclusive 8 KiB staging area. The capture slot can be returned after being copied to staging, but staging cannot be reused until the write request is completed. If it fails, you can still clearly distinguish between "the original slot has been returned and the record is still staging" and "the record has been discarded" to avoid double release; there is no need to configure independent large staging for each file.
 
 
-```plantuml
-@startuml
-hide empty description
-skinparam shadowing false
-
-state "FREE" as FREE
-state "FILLING" as FILLING
-state "READY" as READY
-state "READING" as READING
-state "ERROR_HELD" as ERROR_HELD
-
-[*] --> FREE
-FREE --> FILLING : 唯一生产者预约
-FILLING --> READY : release发布
-FILLING --> FREE : 取消未发布快照
-READY --> READING : Storage acquire取得
-READING --> FREE : 同步消费完成或复制至Storage私有区
-READING --> ERROR_HELD : IO失败且所有权尚未解除
-ERROR_HELD --> FREE : 确认DMA停止后显式清理
-@enduml
-```
+![7.1 Do not add an extra layer of transfer to the baseline](images/1q2zm8p.svg)
 
 
 State diagrams express ownership and do not require each slot to store a set of redundant state fields. SPSC can use monotonic unsigned indexing, N is a power of 2, used=write_seq-read_seq, keep 0<=used<=N and N is much less than 2^31. The half-filled block is not visible to consumers when it is not released; a filling deadline needs to be set for a small amount of logs and cannot be delayed indefinitely just to collect 4KiB.
@@ -353,32 +247,7 @@ Socket, business channel, netif and physical IPC lane are four different objects
 MCU usually reuses an lwIP stack: WAN is the default interface, and IPC is an independent non-conflicting subnet. Cross-core Socket requires the peer to be compatible with the protocol stack and IP bearer; netif itself does not require a real Ethernet MAC and can bear raw-IP in shared memory/SPI, etc. Modem public network implementation may be routing/NAT, or IP transparent transmission/PPP. The original wan-lan0 plus NAT is only an optional topology; the upstream lwIP should not be assumed to have provided product-level NAT.
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "两个诊断 Socket" as diag
-rectangle "IPC 地址域" as ipc
-rectangle "公网应用 Socket" as app
-rectangle "WAN 默认接口" as wan
-rectangle "IPC 出口地址与链路校验" as guardI
-rectangle "WAN 出口拒绝 IPC 源和目的" as guardW
-rectangle "Modem 本地诊断端点" as local
-rectangle "Modem 公网透传或路由" as modemWan
-rectangle "蜂窝网络" as cell
-rectangle "MCU 本地 TCPDump" as capture
-
-diag --> ipc
-app --> wan
-ipc --> guardI
-wan --> guardW
-guardI --> local
-guardW --> modemWan
-modemWan --> cell
-wan ..> capture : 只读快照
-@enduml
-```
+![9. Isolation and revision of data between public network and core](images/174bx71.svg)
 
 
 Security baseline: fixed and independent of the IPC address range of netif's current IP; IPC services at both ends are bound to specify local addresses; WAN send/receive boundaries prohibit IPC sources or destinations; IPC boundaries only allow legal peers and local addresses; IP_FORWARD is turned off when the MCU is not responsible for forwarding. There must be corresponding policies when IPv6 is enabled. You cannot just fix IPv4 and claim that isolation is complete.
@@ -457,22 +326,7 @@ Start: Storage prepares files and resources; initializes independent session gen
 Stop has two paths: the Socket service stops the source and continues to read the tail/ACK within the deadline, and then is closed by the Owner; Capture only closes the snapshot admission, **does not close WAN netif**, waits for the entered tap to exit, and then empties the private slot. Generation is used to identify the session and does not replace the callback to exit synchronization; the old generation objects are still returned to the original owner, and the buffer cannot be leaked because of "generation mismatch".
 
 
-```plantuml
-@startuml
-    participant "会话管理" as manager
-    participant "Reactor或Capture入口" as producer
-    participant "Storage Owner" as storage
-    participant "SD驱动" as disk
-    manager ->> producer : 停止指定业务输入
-    producer ->> producer : 禁止新进入并等待在途完成
-    producer -->> manager : 输入已静默
-    manager ->> storage : 排空该业务并关闭文件
-    storage ->> disk : 完成写入和同步
-    disk -->> storage : 成功或有界故障
-    storage -->> manager : 结果与资源清理确认
-    manager ->> manager : 标记STOPPED或FAULTED
-@enduml
-```
+![12. Life cycle and thread strategy](images/1ymbe3s.svg)
 
 
 There are upper limits for waiting for close-ack, queue emptying, DMA abort and sync; when it times out, it enters FAULTED and does not occupy the global management lock indefinitely. Stopping the business does not mean that the execution task has been deleted, and the rest of the business continues to run.

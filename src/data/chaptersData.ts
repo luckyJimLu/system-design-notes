@@ -13,7 +13,8 @@ const markdownModules = import.meta.glob<string>(
 // Load all image assets so Vite bundles and resolves their URLs automatically
 const imageModules = import.meta.glob<string>(
   [
-    '../../content/[0-9]*/**/images/*.png'
+    '../../content/[0-9]*/**/images/*.png',
+    '../../content/[0-9]*/**/images/*.svg'
   ],
   { query: '?url', import: 'default', eager: true }
 ) as Record<string, string>;
@@ -26,6 +27,9 @@ for (const [key, url] of Object.entries(imageModules)) {
   // key is e.g. "../../content/01. Scaling/images/single-server.png"
   const cleanKey = key.replace(/^\.\.\/\.\.\//, ''); // "content/01. Scaling/images/single-server.png"
   imageLookupMap.set(cleanKey.toLowerCase(), url);
+  // Also index without the "content/" prefix so chapter-qualified lookups
+  // ("29. embedded-systems/rtos/images/foo.svg") hit exactly.
+  imageLookupMap.set(cleanKey.replace(/^content\//, '').toLowerCase(), url);
 
   const parts = cleanKey.split('/');
   const fileName = parts[parts.length - 1]; // "single-server.png"
