@@ -26,28 +26,7 @@ Establish two logical network interfaces on both sides of the MCU and Modem:
 - There is also `cell0` on the Modem side: cellular public network outlet.
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-left to right direction
-
-rectangle "MCU应用" as A
-rectangle "MCU ipc0\n172.31.255.2/30" as I1
-rectangle "Modem ipc0\n172.31.255.1/30" as I2
-rectangle "MCU wan0\n192.168.225.2/24" as W1
-rectangle "Modem wan-lan0\n192.168.225.1/24" as W2
-rectangle "NAT/路由" as N
-rectangle "Modem cell0\n蜂窝公网" as C
-
-A --> I1
-I1 <--> I2 : IPC通道0
-A --> W1
-W1 <--> W2 : IPC通道1或PPP
-W2 --> N
-N --> C
-@enduml
-```
+![2. Overall conclusion](images/kb6x7t.svg)
 
 
 Even if the bottom layers of `ipc0` and `wan0` share the same shared memory, SPI, or inter-core message channel, the upper layer must be registered as two independent `struct netif`, and the bottom frame header uses `channel_id` for offloading.
@@ -78,29 +57,7 @@ Key rules:
 ## 4. MCU side architecture
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "MCU应用" as APP
-rectangle "BSD Socket API" as API
-rectangle "lwIP TCP/IP" as TCP
-rectangle "路由策略" as R
-rectangle "ipc0" as IPC
-rectangle "wan0 默认路由" as WAN
-rectangle "核间通道0" as CH0
-rectangle "核间通道1 / PPP" as CH1
-
-APP --> API
-API --> TCP
-TCP --> R
-R --> IPC : IPC目标地址
-R --> WAN : 其他目标
-IPC --> CH0
-WAN --> CH1
-@enduml
-```
+![4. MCU side architecture](images/1ulgs5j.svg)
 
 
 ### 4.1 MCU Responsibilities
@@ -173,26 +130,7 @@ void network_init(void)
 ## 5. Modem side architecture
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "核间通道0" as CH0
-rectangle "Modem ipc0" as IPC
-rectangle "控制/IND/日志Socket服务" as S
-rectangle "核间通道1" as CH1
-rectangle "wan-lan0" as LAN
-rectangle "仅WAN转发/NAT" as F
-rectangle "cell0 蜂窝公网" as CELL
-
-CH0 --> IPC
-IPC --> S
-CH1 --> LAN
-LAN --> F
-F --> CELL
-@enduml
-```
+![5. Modem side architecture](images/1ls1shj.svg)
 
 
 ### 5.1 Modem responsibilities

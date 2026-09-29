@@ -111,32 +111,11 @@ Cortex-M 等 MCU 常采用向低地址增长的栈。以下行为很容易放大
 
 多个任务同时获取多个资源时，必须定义统一锁顺序，例如：
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-:Storage;
-:Bus;
-:Device;
-stop
-@enduml
-```
+![3.4 死锁与锁顺序](images/1kpknfj.svg)
 
 禁止出现：
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-#LightBlue:Task A: lock Bus;
-#LightBlue:Task A: lock Device;
-#LightCoral:Task B: lock Device;
-#LightCoral:Task B: lock Bus;
-stop
-@enduml
-```
+![3.4 死锁与锁顺序](images/1x6c7rb.svg)
 
 更推荐：
 
@@ -182,24 +161,7 @@ stop
 
 推荐模型：
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-left to right direction
-
-rectangle "硬件中断 IRQ" as irq
-rectangle "顶半部 ISR\n(快速采样/清除中断标志)" as topHalf
-rectangle "轻量 IPC 解耦\n(Ring Buffer / Task Notification)" as ipc
-rectangle "底半部 Worker Task / 状态机\n(完整报文解析 / 状态转移)" as bottomHalf
-rectangle "业务逻辑处理与完成" as biz
-
-irq --> topHalf
-topHalf --> ipc
-ipc --> bottomHalf
-bottomHalf --> biz
-@enduml
-```
+![4.1 ISR 设计原则](images/d2mxuh.svg)
 
 ### 4.2 临界区长度决定中断响应下限
 
@@ -235,29 +197,11 @@ bottomHalf --> biz
 
 不推荐：
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-:SysTick ISR;
-:Feed Watchdog;
-stop
-@enduml
-```
+![5.1 错误的喂狗位置](images/1o1jpe.svg)
 
 也不推荐简单地：
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-:Idle Task;
-:Feed Watchdog;
-stop
-@enduml
-```
+![5.1 错误的喂狗位置](images/prl9xf.svg)
 
 原因是业务线程可能已经死锁，但 SysTick 或 Idle 仍然继续运行，看门狗会被“假健康”地刷新。
 
@@ -265,37 +209,7 @@ stop
 
 典型 Tickless 流程：
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "系统进入空闲 Idle 任务" as start
-rectangle "计算下一次任务唤醒时间\n(Next Wakeup Tick)" as calc
-rectangle "剩余睡眠时间\n> 最小阈值?" as checkMin
-rectangle "执行常规低开销 WFI\n维持系统 Tick" as normalIdle
-rectangle "配置低功耗硬件定时器 (LPTIM)" as cfgTimer
-rectangle "停止/屏蔽标准 SysTick" as stopTick
-rectangle "原子确认: 是否有新中断/任务\n在准备期间就绪 (Race Check)?" as raceCheck
-rectangle "中止睡眠 (Sleep Abort)\n立即恢复 SysTick 调度" as abortSleep
-rectangle "执行 WFI / WFE 进入低功耗模式" as enterWFI
-rectangle "中断唤醒" as wakeup
-rectangle "根据 LPTIM 计数补偿系统 Tick" as compTime
-rectangle "恢复标准调度器与外设时钟" as resumeOS
-
-start --> calc
-calc --> checkMin
-checkMin --> normalIdle : 否
-checkMin --> cfgTimer : 是
-cfgTimer --> stopTick
-stopTick --> raceCheck
-raceCheck --> abortSleep : 有新任务就绪
-raceCheck --> enterWFI : 安全无就绪
-enterWFI --> wakeup
-wakeup --> compTime
-compTime --> resumeOS
-@enduml
-```
+![5.2 Tickless Idle 的竞争窗口](images/162pnrr.svg)
 
 在“计算完成”和真正执行 `WFI` 之间若发生异步事件，并使高优先级任务就绪，就需要确保内核不会错误进入深睡眠。
 
@@ -314,23 +228,7 @@ compTime --> resumeOS
 
 推荐分层：
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "Application (应用层)" as app
-rectangle "Domain / Service (领域服务层)" as domain
-rectangle "Driver Interface (驱动接口层)" as drv
-rectangle "HAL / BSP (硬件抽象与板级支持)" as hal
-rectangle "MMIO / Hardware Registers (物理寄存器)" as mmio
-
-app --> domain : 高层业务逻辑
-domain --> drv : 抽象设备契约
-drv --> hal : 零开销内联 / 编译期配置
-hal --> mmio : 直读直写
-@enduml
-```
+![6.1 严格分层 + 零成本抽象](images/xcybou.svg)
 
 对极限资源 MCU，应尽量避免深层运行时动态派发。可以采用：
 
@@ -346,34 +244,7 @@ hal --> mmio : 直读直写
 
 架构对比：
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-package "传统模式 (RAM 浪费严重)" as TRAD {
-  rectangle "模块 A" as m1
-  rectangle "Task A + 私有栈 A" as tA
-  rectangle "模块 B" as m2
-  rectangle "Task B + 私有栈 B" as tB
-  rectangle "模块 C" as m3
-  rectangle "Task C + 私有栈 C" as tC
-}
-package "活动对象模式 (SRAM 极致节省)" as AO {
-  rectangle "统一 Event Queue" as events
-  rectangle "单一 Active Object Task (共享单一栈)" as aoTask
-  rectangle "层次化状态机 (HSM)" as hsm
-  rectangle "Run-to-Completion 快速分发" as rtc
-}
-
-m1 --> tA
-m2 --> tB
-m3 --> tC
-events --> aoTask
-aoTask --> hsm
-hsm --> rtc
-@enduml
-```
+![6.2 活动对象（Active Object）+ 层次化状态机（HSM）](images/1i4kp1q.svg)
 
 核心原则：
 
@@ -420,21 +291,7 @@ next = (index + 1U) & (SIZE - 1U);
 
 关键原则是：
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "1. 先写入数据至 ring_buffer->data[head]" as wData
-rectangle "2. 插入硬件内存屏障 (__DMB / 编译器屏障)" as dmb
-rectangle "3. 更新发布写指针: ring_buffer->head = next" as pubHead
-rectangle "4. 通知或唤醒消费者读取" as notify
-
-wData --> dmb
-dmb --> pubHead
-pubHead --> notify
-@enduml
-```
+![7.2 内存顺序](images/7x32q4.svg)
 
 在 ARM CMSIS 环境可以根据目标架构和共享对象语义使用适当的内存屏障（例如 `__DMB()`），避免消费者先观察到索引更新、却尚未看到对应数据。
 
@@ -454,16 +311,7 @@ pubHead --> notify
 
 如果通信关系是：
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-:ISR/Task A;
-:单一 Task B;
-stop
-@enduml
-```
+![8.1 Task Notification 优先原则](images/qvb8be.svg)
 
 且只需：
 
@@ -640,39 +488,7 @@ gcc -fstack-usage ...
 
 ### 12.1 架构
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-package "业务任务心跳 (独立 Bit 位)" as TASKS {
-  rectangle "Task A (业务闭环)" as tA
-  database "心跳位图寄存器" as reg
-  rectangle "Task B (协议处理)" as tB
-  rectangle "Task C (传感器采样)" as tC
-}
-rectangle "Watchdog Supervisor 检查任务" as supervisor
-rectangle "所有关键业务位\n均已打卡 (WaitAll)?" as check
-rectangle "刷新物理看门狗 (Feed WDG)" as feed
-rectangle "原子清零所有心跳位图" as clear
-rectangle "进入下一监管周期" as nextPeriod
-rectangle "拒绝喂狗 (Do Not Feed)" as refuse
-rectangle "保存最小崩溃上下文至 Backup RAM" as faultSave
-rectangle "硬件看门狗超时 -> 强制芯片复位" as hwReset
-
-tA --> reg : 原子置位 BIT0
-tB --> reg : 原子置位 BIT1
-tC --> reg : 原子置位 BIT2
-reg --> supervisor
-supervisor --> check
-check --> feed : 是 (全部健康)
-feed --> clear
-clear --> nextPeriod
-check --> refuse : 否 (存在死锁/饿死)
-refuse --> faultSave
-faultSave --> hwReset
-@enduml
-```
+![12.1 架构](images/10qnaw2.svg)
 
 ### 12.2 原则
 
@@ -742,33 +558,7 @@ faultSave --> hwReset
 
 ## 14. 推荐的系统级轻量架构
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-package "应用业务层 (Application)" as L1 {
-  rectangle "HSM / Active Objects / 领域状态机\n(Run-to-Completion 无阻塞)" as app
-}
-package "事件与服务层 (Event / Service Layer)" as L2 {
-  rectangle "Task Notification | Event Queue | 定时器事件" as events
-}
-package "RTOS 精简工作线程域 (Few RTOS Worker Tasks)" as L3 {
-  rectangle "Control Task | I/O Task | 协议存储 Task | Supervisor" as workers
-}
-package "驱动与平台抽象 (Driver / HAL / BSP)" as L4 {
-  rectangle "UART | SPI | I2C | ADC | DMA | Flash | WDG" as drivers
-}
-package "物理硬件层 (Hardware)" as L5 {
-  rectangle "MCU 外设寄存器 / 物理引脚 / 中断控制器" as hw
-}
-
-app --> events : 分发业务事件
-events --> workers : 异步唤醒驱动
-workers --> drivers : 非阻塞/DMA 访问
-drivers --> hw : 直接寄存器 MMIO
-@enduml
-```
+![14. 推荐的系统级轻量架构](images/1alc67o.svg)
 
 ### 推荐线程角色
 
@@ -843,21 +633,7 @@ drivers --> hw : 直接寄存器 MMIO
 
 优先级建议：
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "1. Task Notification (任务通知)\n(最轻量：零额外 RAM 控制块，直接利用 TCB)" as p1
-rectangle "2. SPSC Ring Buffer (无锁单产单消环)\n(仅需静态数组与 head/tail 索引，无阻塞开销)" as p2
-rectangle "3. OS Queue / Semaphore\n(包含等待链表与调度上下文切换，适度使用)" as p3
-rectangle "4. 复杂共享锁与互斥量\n(需强制优先级继承与锁顺序防死锁，优先级最低)" as p4
-
-p1 --> p2 : 需要数据缓冲队列
-p2 --> p3 : 需要多对多或等待阻塞
-p3 --> p4 : 严禁滥用
-@enduml
-```
+![16.3 通信原语轻量化](images/olzwcs.svg)
 
 前提是通信语义确实匹配，不能为了“轻量”而牺牲正确性。
 
@@ -891,33 +667,7 @@ Stack Analysis
 
 ## 17. 推荐验证流程
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "1. 定义 MCU 资源预算\n(ROM/RAM/Stack/ISR Latency 限额)" as s1
-rectangle "2. 静态设计\n(任务规划 / 缓冲尺寸 / IPC 选型)" as s2
-rectangle "3. 编译分析\n(生成 ELF + .map + .su 静态调用图)" as s3
-rectangle "4. 静态审计\n(Flash/RAM 占用率与最差栈深度)" as s4
-rectangle "5. 实时性实测\n(GPIO/Trace 测量 ISR / WCET / 延迟)" as s5
-rectangle "6. 压力负载测试\n(峰值吞吐 / 持续满载稳定性验证)" as s6
-rectangle "7. 故障注入矩阵\n(Task Hang / 锁死 / 环溢出 / 栈打满 / 突发 DMA)" as s7
-rectangle "8. 验证自愈容灾\n(Watchdog 触发 & Backup RAM 崩溃现场保存)" as s8
-rectangle "9. 低功耗与时序\n(Tickless 唤醒时序 & 竞争窗口拦截)" as s9
-rectangle "10. 冻结量产配置\n(关闭调试开关，固化只读区与校验)" as s10
-
-s1 --> s2
-s2 --> s3
-s3 --> s4
-s4 --> s5
-s5 --> s6
-s6 --> s7
-s7 --> s8
-s8 --> s9
-s9 --> s10
-@enduml
-```
+![17. 推荐验证流程](images/1l3gteq.svg)
 
 ---
 

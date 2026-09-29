@@ -17,3 +17,28 @@ manually before performing a task that matches it:
 When a task clearly matches one of these skills, read its complete `SKILL.md`
 before taking task actions. If multiple skills apply, read the smallest set
 that covers the task and use them in dependency order.
+
+## Diagram authoring (PlantUML)
+
+Do NOT embed ```plantuml code fences in markdown. Diagrams are committed as
+image assets so they render on GitHub, in VS Code preview, in dev tools, and
+on the site with no plugin:
+
+- Source: `content/<chapter>/images/<name>.puml` (editable, the single source of truth)
+- Rendered: `content/<chapter>/images/<name>.svg` (committed to git)
+- Reference from markdown: `![Alt text](images/<name>.svg)`
+
+Workflow for new or changed diagrams:
+
+1. Write or edit `content/<chapter>/images/<name>.puml` (semantic file name, e.g. `socket-reactor-tasks.puml`)
+2. `npm run render:diagrams` (only re-renders stale sources; add `-- --force` to render all)
+3. `npm run validate:content` — fails on embedded PlantUML fences, missing `.svg`
+   targets, orphaned `.svg` files without a `.puml` source, and warns when a
+   `.puml` is newer than its `.svg`
+
+Notes:
+
+- `scripts/render-diagrams.mjs` injects the CJK font (`Noto Sans CJK SC`) at
+  render time; keep `.puml` files free of environment-specific skinparams.
+- The site bundles `content/[0-9]*/**/images/*.{png,svg}` via `import.meta.glob`,
+  so the same relative `images/...` links work in the built site.
