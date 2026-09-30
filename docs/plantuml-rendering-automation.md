@@ -30,7 +30,7 @@ Actions 缓存键为 `plantuml-runtime-<runner.os>-<setup-plantuml.sh 的内容�
 2. 恢复 PlantUML / 字体缓存 → `bash scripts/setup-plantuml.sh`。
 3. 校验已提交内容与图片，拦截缺少 SVG、缺少源码、失效图片引用和嵌入 PlantUML 代码块。
 4. `npm run render:diagrams -- --force`，对全部源码做真实渲染，避免 checkout 时间戳造成错误跳过。
-5. 再次校验内容 → TypeScript 检查 → Vite 构建。
+5. 再次校验内容 → TypeScript 检查 → `bash scripts/check-cpp-examples.sh`（C++20 编译与行为检查）→ Vite 构建。
 6. 无论成功或失败，上传现有 `logs/plantuml-render.log` 为 `plantuml-render-logs` artifact。
 7. PR 运行检查但不发布；`main` push 和手动触发在全部检查通过后上传 Pages 产物并部署。
 

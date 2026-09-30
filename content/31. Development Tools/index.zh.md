@@ -15,6 +15,10 @@ tags: [开发工具, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, CI/C
 > 整理日期：2026-09-28  
 > 资料来源：资料库中的 OpenCode / Oh My OpenAgent / Agent 架构文档，以及 OpenAI Codex 官方文档。
 
+## C++ 系统架构实践入口
+
+- [C++ 系统架构实战：所有权、任务调度与异步结果](#/chapter/content-cpp-system-architecture-practice)：智能指针、模板、Promise/Future、锁、CV、线程池、Handler/Runner 与 Java 对照。
+
 ## Jev 与 AI Gateway 实践入口
 
 - [Jev × Cloudflare AI Gateway 验证与接入 SOP](#/chapter/content-jev-cloudflare-ai-gateway)：Cloudflare 调用、最小烟测、验收记录和浏览器代理接入边界。

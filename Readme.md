@@ -110,6 +110,8 @@ content/01. Scaling/Readme.zh.md
 
 这些文件不会被当前 `index*.md` Loader 自动发现，而是通过 `src/data/chaptersData.ts` 进入站点。迁移旧专题时，应转换为 `index.zh.md` / `index.en.md` 并补充 front matter；迁移完成后再从旧数据源移除对应条目。
 
+[C++ 系统架构实战：所有权、任务调度与异步结果](#/chapter/content-cpp-system-architecture-practice) · [GitHub 文档](content/33.%20Cpp%20System%20Architecture/index.zh.md)
+
 [PlantUML 图片渲染与 Actions 自动化指南](docs/plantuml-rendering-automation.md)
 
 ## 3. 渲染与扩展边界

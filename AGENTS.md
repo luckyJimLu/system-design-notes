@@ -54,3 +54,10 @@ Follow `docs/plantuml-rendering-automation.md` for the full pipeline and trouble
 - For diagram changes: render, commit source and image together, then run `npm run validate:content`, `npm run lint`, and `npm run build`.
 - PRs must validate committed assets, force-render every source, type-check, and build without publishing. Pushes to `main` and manual dispatch run the same checks before Pages deployment.
 - A change is verified only with real command output and the matching commit's Action results. Report rendering failures from `plantuml-render-logs`; do not hide failures or claim a queued run succeeded.
+
+## C++ teaching examples
+
+- C++ architecture materials live under `content/33. Cpp System Architecture/`, with paired locale documents, PlantUML image assets, and self-contained examples.
+- Compile and run changed C++ examples with `bash scripts/check-cpp-examples.sh`; this check is also required in Pages CI. Keep C++20 as the baseline unless the document explicitly labels a newer feature.
+- Explain ownership, execution location, result delivery and shutdown contracts. Distinguish compilable examples from conceptual snippets and Java analogies from equivalent semantics.
+- Do not describe `shared_ptr` as object synchronization, Future timeouts as cancellation, or coroutine syntax as a runtime scheduler. Preserve explicit limitations of teaching executors.

@@ -14,6 +14,10 @@ tags: [Developer Tools, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, C
 >
 > Updated: 2026-09-28
 
+## C++ architecture practice
+
+- [C++ System Architecture in Practice](#/chapter/content-cpp-system-architecture-practice): ownership, templates, futures, synchronization, scheduling and Java comparisons.
+
 ## Jev and AI Gateway
 
 - [Jev with Cloudflare AI Gateway SOP](#/chapter/content-jev-cloudflare-ai-gateway): API smoke test, acceptance checks, and browser agent integration boundary.

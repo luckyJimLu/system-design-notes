@@ -61,6 +61,9 @@ jobs:
       - name: Type check
         run: npm run lint
 
+      - name: Compile and run C++ architecture examples
+        run: bash scripts/check-cpp-examples.sh
+
       - name: Build
         run: npm run build
 
