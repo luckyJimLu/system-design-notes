@@ -87,6 +87,9 @@ function validateDiagramAssets() {
         queue.push(path);
         continue;
       }
+      if (/\.puml$/i.test(entry.name) && !existsSync(path.replace(/\.puml$/i, '.svg'))) {
+        errors.push(`${relative(process.cwd(), path)}: missing rendered .svg; run 'npm run render:diagrams' and commit both files`);
+      }
       if (!/\.svg$/i.test(entry.name)) continue;
       const svgPath = path;
       const pumlPath = svgPath.replace(/\.svg$/i, '.puml');

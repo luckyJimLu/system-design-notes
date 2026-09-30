@@ -42,3 +42,15 @@ Notes:
   render time; keep `.puml` files free of environment-specific skinparams.
 - The site bundles `content/[0-9]*/**/images/*.{png,svg}` via `import.meta.glob`,
   so the same relative `images/...` links work in the built site.
+
+## Automated documentation rendering and delivery
+
+Follow `docs/plantuml-rendering-automation.md` for the full pipeline and troubleshooting.
+
+- Development-tool flowcharts follow the same `.puml` + committed `.svg` + Markdown image convention; keep executable examples and directory listings as code.
+- Before editing CI, compare each referenced npm script and script file with the current repository. Do not retain removed `render:plantuml` or `scripts/plantuml.test.mjs` references.
+- Runtime setup is centralized in `scripts/setup-plantuml.sh`. Keep PlantUML and font URLs pinned, verify SHA-256 on downloads and cache hits, and invalidate the Actions runtime cache by changing this script.
+- Cache JAR and CJK font assets with Actions cache; do not commit runtime binaries. Install Java / Graphviz / fontconfig only when absent. SVG documentation images remain committed.
+- For diagram changes: render, commit source and image together, then run `npm run validate:content`, `npm run lint`, and `npm run build`.
+- PRs must validate committed assets, force-render every source, type-check, and build without publishing. Pushes to `main` and manual dispatch run the same checks before Pages deployment.
+- A change is verified only with real command output and the matching commit's Action results. Report rendering failures from `plantuml-render-logs`; do not hide failures or claim a queued run succeeded.

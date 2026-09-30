@@ -22,16 +22,7 @@ tags: [Developer Tools, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, C
 
 Treat OpenCode and Codex as constrained software engineers, not chatbots.
 
-```text
-Goal and acceptance criteria
-  → repository rules and issue context
-  → read-only exploration / reproduction
-  → plan and risk review
-  → minimal implementation
-  → build, tests, static checks
-  → diff review and evidence
-  → commit, PR, release, or rollback
-```
+![Engineering delivery loop](images/engineering-loop-en.svg)
 
 The shared principles are:
 
@@ -161,9 +152,7 @@ Read repository guidance and issue context; map the code; define acceptance and 
 
 Use:
 
-```text
-Reproduce → locate → hypothesize → minimal fix → regression test → reproduce again
-```
+![Bug fix workflow](images/bugfix-loop-en.svg)
 
 ### Large refactor
 
