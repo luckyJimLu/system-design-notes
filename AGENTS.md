@@ -57,7 +57,10 @@ Follow `docs/plantuml-rendering-automation.md` for the full pipeline and trouble
 
 ## C++ teaching examples
 
-- C++ architecture materials live under `content/33. Cpp System Architecture/`, with paired locale documents, PlantUML image assets, and self-contained examples.
+- C++ architecture materials live under `content/33. Cpp System Architecture/` and `content/34. Boost Asio Deep Dive/`, with paired locale documents, PlantUML image assets, and self-contained examples.
 - Compile and run changed C++ examples with `bash scripts/check-cpp-examples.sh`; this check is also required in Pages CI. Keep C++20 as the baseline unless the document explicitly labels a newer feature.
 - Explain ownership, execution location, result delivery and shutdown contracts. Distinguish compilable examples from conceptual snippets and Java analogies from equivalent semantics.
 - Do not describe `shared_ptr` as object synchronization, Future timeouts as cancellation, or coroutine syntax as a runtime scheduler. Preserve explicit limitations of teaching executors.
+
+- Asio teaching examples use C++20 and Boost 1.83.0 with version assertions. Build CI uses Ubuntu 24.04 and `libboost1.83-dev`; source references are pinned. Update dependency, assertions, source links and documented contracts together when changing the baseline.
+- Asio checks cover token adaptation, execution domains, cancellation completion, coroutine ownership and real loopback TCP. Keep timeout-based hang detection, and distinguish tests from production shutdown guarantees.

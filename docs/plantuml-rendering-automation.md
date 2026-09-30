@@ -26,13 +26,15 @@ Actions 缓存键为 `plantuml-runtime-<runner.os>-<setup-plantuml.sh 的内容�
 
 `.github/workflows/deploy-pages.yml` 执行以下过程：
 
-1. Checkout → Node 24 / npm 缓存 → `npm ci`。
+1. Ubuntu 24.04 build runner：Checkout → Node 24 / npm 缓存 → `npm ci`。
 2. 恢复 PlantUML / 字体缓存 → `bash scripts/setup-plantuml.sh`。
 3. 校验已提交内容与图片，拦截缺少 SVG、缺少源码、失效图片引用和嵌入 PlantUML 代码块。
 4. `npm run render:diagrams -- --force`，对全部源码做真实渲染，避免 checkout 时间戳造成错误跳过。
-5. 再次校验内容 → TypeScript 检查 → `bash scripts/check-cpp-examples.sh`（C++20 编译与行为检查）→ Vite 构建。
+5. 再次校验内容 → TypeScript 检查 → `bash scripts/check-cpp-examples.sh`（C++20 编译与行为检查，含 Asio 合同与 TCP 用例）→ Vite 构建。
 6. 无论成功或失败，上传现有 `logs/plantuml-render.log` 为 `plantuml-render-logs` artifact。
 7. PR 运行检查但不发布；`main` push 和手动触发在全部检查通过后上传 Pages 产物并部署。
+
+C++ 检查前安装 `libboost1.83-dev`，与 Asio 文档固定的教学源码版本保持一致。TCP 用例只绑定 loopback 临时端口；检查脚本设置超时避免挂起。
 
 PR 与主分支采用独立并发组；同一分支上的旧运行会取消，不影响主分支发布。生成的 SVG 进入 `dist`，Actions 不自动回写代码仓库。
 

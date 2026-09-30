@@ -259,3 +259,5 @@ Checkout
 - [一致性哈希补充资料](https://tom-e-white.com/2007/11/consistent-hashing.html)
 
 > 本项目是个人学习笔记，内容持续整理中。涉及原书内容时请以原书和官方资料为准。
+
+[Boost.Asio 深入解读](#/chapter/content-boost-asio-deep-dive) · [GitHub 文档](content/34.%20Boost%20Asio%20Deep%20Dive/index.zh.md)

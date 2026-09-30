@@ -498,3 +498,7 @@ Linux 上的 Muduo、Asio、bRPC、Seastar 不是可直接照搬到 NuttX/LiteOS
 - [Java 虚拟线程 JEP 444](https://openjdk.org/jeps/444)
 
 本文代码片段除项目事实说明外均为独立教学表达；片段中的 Device、Request、Response、executor 等业务类型或接口需要由实际工程提供。唯一完整可编译程序是配套 bounded_thread_pool.cpp，CI 会编译并运行它。
+
+## 延伸阅读：把这些特性放进真实异步框架
+
+[Boost.Asio 深入解读](#/chapter/content-boost-asio-deep-dive)沿一次异步读追踪 Executor、Handler、Token 和协程的源码，配有真实 TCP 示例。[GitHub 文档](../34.%20Boost%20Asio%20Deep%20Dive/index.zh.md)。

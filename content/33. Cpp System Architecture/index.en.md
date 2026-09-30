@@ -122,3 +122,7 @@ ROS 2 zero-copy behavior depends on process boundaries, ownership demands, subsc
 ## 9. Review checklist
 
 Identify every owner, borrowed buffer lifetime, mutation domain, task/queue limit, lock held across user code, blocking wait, completion winner, accepted-task outcome, shutdown dependency and destruction thread. Only then investigate lock-free queues, pools, work stealing or complex templates, measuring throughput, tail latency, queue delay, copies, memory and shutdown time.
+
+## Further reading
+
+[Boost.Asio Deep Dive](#/chapter/content-boost-asio-deep-dive) follows an asynchronous read through source and includes real TCP examples. [GitHub document](../34.%20Boost%20Asio%20Deep%20Dive/index.en.md).
