@@ -11,7 +11,10 @@ const logDir = path.join(repoRoot, 'logs');
 const textLogPath = path.join(logDir, 'plantuml-render.log');
 const jsonLogPath = path.join(publicOutputDir, 'render-log.json');
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'system-design-notes-plantuml-'));
-const plantumlJar = process.env.PLANTUML_JAR || path.join(repoRoot, '.cache', 'plantuml.jar');
+const plantumlJar = process.env.PLANTUML_JAR ||
+  (fs.existsSync(path.join(repoRoot, 'tools', 'plantuml.jar'))
+    ? path.join(repoRoot, 'tools', 'plantuml.jar')
+    : path.join(repoRoot, '.cache', 'plantuml.jar'));
 const cjkFontName = process.env.PLANTUML_CJK_FONT || 'Noto Sans CJK SC';
 const logEntries = [];
 

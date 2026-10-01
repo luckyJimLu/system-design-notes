@@ -35,17 +35,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install PlantUML runtime
+      - name: Install runtime dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y default-jre-headless graphviz fonts-noto-cjk
+          sudo apt-get install -y default-jre-headless graphviz fonts-noto-cjk poppler-utils
 
-      - name: Download PlantUML jar
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install PDF conversion tools
         run: |
-          mkdir -p .cache
-          curl -L --fail --retry 3 \
-            -o .cache/plantuml.jar \
-            https://repo1.maven.org/maven2/net/sourceforge/plantuml/plantuml/1.2024.8/plantuml-1.2024.8.jar
+          uv pip install --system "markitdown[pdf]"
+
+      - name: Convert PDFs to Markdown
+        run: npm run convert:pdfs
 
       - name: Render PlantUML diagrams
         run: npm run render:plantuml

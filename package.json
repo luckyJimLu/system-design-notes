@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
+    "convert:pdfs": "if [ -x .venv/bin/python ]; then .venv/bin/python scripts/convert-pdfs.py; else python3 scripts/convert-pdfs.py; fi",
     "validate:content": "node scripts/validate-content.mjs",
     "render:plantuml": "node scripts/render-plantuml.mjs",
     "build": "npm run validate:content && vite build",
