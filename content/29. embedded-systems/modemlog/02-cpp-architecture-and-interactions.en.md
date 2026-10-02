@@ -18,40 +18,7 @@ This design uses C++ types and access control to express boundaries, and does no
 ## 2. Module and task mapping
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "DiagnosticApi" as api
-package "SocketReactor 任务" as reactorTask {
-  rectangle "SessionCoordinator" as coordinator
-  rectangle "SocketReactor" as reactor
-  rectangle "LogSession" as log
-  rectangle "ChrSession" as chr
-}
-rectangle "Log 与 CHR 专用环" as rings
-rectangle "已有 lwIP RX / TX 上下文" as hooks
-rectangle "CaptureTap 与 CaptureGate" as tap
-rectangle "独立 RX / TX 快照环" as cap
-rectangle "StorageOwner 任务" as storage
-rectangle "FatFsPort 与三个文件会话" as files
-
-api --> coordinator : 固定请求槽
-coordinator --> reactor
-reactor --> log
-reactor --> chr
-log --> rings
-chr --> rings
-hooks --> tap
-tap --> cap
-coordinator --> storage : 存储命令槽
-rings --> storage
-cap --> storage
-storage --> files
-storage ..> coordinator : 保留至确认的结果槽
-@enduml
-```
+![2. Module and task mapping](images/1xvu1z0.svg)
 
 
 | C++ types | Responsibilities and Status | calling context | Prohibited matters |
@@ -269,24 +236,7 @@ Network hooks are placed in a task context that can reliably read packets. If th
 ### 7.1 Prepare documents first before allowing production
 
 
-```plantuml
-@startuml
-    participant "应用" as app
-    participant "Coordinator及Reactor" as ctl
-    participant "StorageOwner" as disk
-    participant "Socket会话或CaptureGate" as source
-    app ->> ctl : 提交 Start 请求
-    ctl ->> disk : PrepareFile 与 generation
-    disk -->> ctl : 保留完成结果
-    alt 文件准备成功
-        ctl ->> source : 非阻塞连接或启用快照
-        source -->> ctl : READY 或连接完成
-        ctl -->> app : 请求完成为 RUNNING
-    else 文件准备失败
-        ctl -->> app : 请求完成为 FAULTED
-    end
-@enduml
-```
+![7.1 Prepare documents first before allowing production](images/1sqmnz8.svg)
 
 
 The Coordinator and Reactor in the figure are in the same task; the interaction with the SocketSession is a short method call, not an additional thread. `connect` must also use a non-blocking state machine: only register writable events and deadlines in progress, and check for Socket errors when completed; it cannot block for several seconds in Start. Use a fixed IPC address to avoid extra DNS waits.
@@ -302,20 +252,7 @@ Log high water level only stops the read interest of the fd; stopping reading wi
 ### 7.3 CHR: Return results by confirmation level
 
 
-```plantuml
-@startuml
-    participant "Modem CHR" as modem
-    participant "ChrSession及Reactor" as rx
-    participant "CHR专用环" as ring
-    participant "StorageOwner" as disk
-    modem ->> rx : 有序消息字节流
-    rx ->> ring : 完整记录或有界分段发布
-    ring ->> disk : 按序消费
-    disk ->> disk : 写入并按策略同步
-    disk -->> rx : 同步检查点与 generation
-    rx -->> modem : 协议允许时发送持久化 ACK
-@enduml
-```
+![7.3 CHR: Return results by confirmation level](images/c6i0c.svg)
 
 
 This is an optional protocol when "CHR requires persistent confirmation" and is not assumed to be the case for all CHRs. Storage does not call send and only returns synchronization progress; Reactor generates ACK and uses a limited send queue to handle short sends.

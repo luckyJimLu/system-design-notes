@@ -3,6 +3,8 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -11,12 +13,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +27,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
 
       - name: Ensure lockfile
         run: |
@@ -35,10 +38,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install runtime dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y default-jre-headless graphviz fonts-noto-cjk poppler-utils
+      - name: Restore PlantUML and CJK font cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/plantuml.jar
+            .cache/fonts
+          key: plantuml-runtime-${{ runner.os }}-${{ hashFiles('scripts/setup-plantuml.sh') }}
+
+      - name: Setup PlantUML runtime
+        run: bash scripts/setup-plantuml.sh
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -52,11 +61,25 @@ jobs:
       - name: Convert PDFs to Markdown
         run: npm run convert:pdfs
 
-      - name: Render PlantUML diagrams
-        run: npm run render:plantuml
+      - name: Validate committed content before rendering
+        run: npm run validate:content
 
-      - name: Verify browser PlantUML asset paths
-        run: node --test scripts/plantuml.test.mjs
+      - name: Render PlantUML diagrams
+        run: npm run render:diagrams -- --force
+
+      - name: Validate committed diagram assets
+        run: npm run validate:content
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Install pinned Boost teaching headers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libboost1.83-dev
+
+      - name: Compile and run C++ architecture examples
+        run: bash scripts/check-cpp-examples.sh
 
       - name: Build
         run: npm run build
@@ -68,18 +91,20 @@ jobs:
           name: plantuml-render-logs
           path: |
             logs/plantuml-render.log
-            public/plantuml/render-log.json
           if-no-files-found: ignore
 
       - name: Configure Pages
+        if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

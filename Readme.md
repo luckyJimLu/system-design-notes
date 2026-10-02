@@ -110,6 +110,10 @@ content/01. Scaling/Readme.zh.md
 
 这些文件不会被当前 `index*.md` Loader 自动发现，而是通过 `src/data/chaptersData.ts` 进入站点。迁移旧专题时，应转换为 `index.zh.md` / `index.en.md` 并补充 front matter；迁移完成后再从旧数据源移除对应条目。
 
+[C++ 系统架构实战：所有权、任务调度与异步结果](#/chapter/content-cpp-system-architecture-practice) · [GitHub 文档](content/33.%20Cpp%20System%20Architecture/index.zh.md)
+
+[PlantUML 图片渲染与 Actions 自动化指南](docs/plantuml-rendering-automation.md)
+
 ## 3. 渲染与扩展边界
 
 `ChapterViewer` 使用以下能力渲染正文：
@@ -118,11 +122,13 @@ content/01. Scaling/Readme.zh.md
 - 标题、列表、表格、引用、代码块和行内代码；
 - 相对路径图片与图片灯箱；
 - Mermaid 图表；
-- PlantUML 图表（代码块语言可使用 `plantuml`、`puml` 或 `uml`）；
+- PlantUML 静态 SVG 图片（配套 `.puml` 源码）；
 - 受控的 `callout` 语义块；
 - 文本流程图和内置 renderer registry。
 
-PlantUML 图表不在浏览器中请求在线渲染服务。GitHub Actions 会在构建前安装 Java / Graphviz，下载固定版本的 PlantUML jar，扫描 Markdown 中的 `plantuml` / `puml` / `uml` 代码块并本地生成 SVG 到 `public/plantuml/*.svg`。前端根据 PlantUML 源码的稳定编码读取随站点发布的静态 SVG；缺失时显示源码和错误态。渲染过程会写入 `logs/plantuml-render.log` 与 `public/plantuml/render-log.json`，便于后续定位和修复失败图块。
+PlantUML 以提交到 Git 的静态图片显示。源码保存在 `content/<chapter>/images/<name>.puml`，配套 SVG 保存在同一目录，Markdown 使用 `![图表说明](images/<name>.svg)` 引用。GitHub、编辑器预览和网站均直接显示图片，无需插件。开发工具文档的流程图也采用此方式，代码示例保留原格式。
+
+修改图表后，先安装 Java / Graphviz / 中文字体，并将固定版本 PlantUML jar 放到 `.cache/plantuml.jar`（或设置 `PLANTUML_JAR`），再执行 `npm run render:diagrams`，将 `.puml` 与 `.svg` 一起提交。GitHub Actions 会强制重新生成全部图表，校验图片引用并构建网站。Actions 使用版本与脚本内容决定的缓存键复用 PlantUML JAR 和单个简体中文字体，仅缓存缺失时下载；缓存命中后仍检查 SHA-256。Java / Graphviz 已存在时跳过安装，npm 也使用缓存。大型运行时二进制不提交到仓库。渲染日志位于 `logs/plantuml-render.log`，作为 Action artifact 保存。不要在 Markdown 中嵌入 PlantUML 代码块。
 
 内容文件只描述知识，不直接写 React/JSX。需要增加新的语义块时，应在 `src/renderers/` 中实现受控 renderer，再由注册表或 Markdown 映射接入。
 
@@ -186,19 +192,22 @@ npm run lint
 npm run build
 ```
 
-- `validate:content`：检查 front matter、ID、语言配对、排序和本地图片引用；
+- `render:diagrams`：将 `.puml` 渲染为同目录 SVG；`-- --force` 强制重新生成全部图片；
+- `validate:content`：检查 front matter、ID、语言配对、排序、图片引用与图表源码配对，禁止嵌入 PlantUML 代码块；
 - `lint`：执行 `tsc --noEmit`；
 - `build`：先校验内容，再生成 `dist/` 静态资源。
 
 ### CI/CD
 
-`.github/workflows/deploy-pages.yml` 在 `main` 分支变更或手动触发时执行：
+`.github/workflows/deploy-pages.yml` 在 PR、`main` 分支变更或手动触发时执行构建检查；仅主分支和手动触发执行 Pages 发布：
 
 ```text
 Checkout
   → Setup Node 24
   → Ensure lockfile
   → npm ci
+  → npm run render:diagrams -- --force
+  → npm run validate:content / npm run lint
   → npm run build
   → Upload Pages artifact
   → Deploy GitHub Pages
@@ -250,3 +259,5 @@ Checkout
 - [一致性哈希补充资料](https://tom-e-white.com/2007/11/consistent-hashing.html)
 
 > 本项目是个人学习笔记，内容持续整理中。涉及原书内容时请以原书和官方资料为准。
+
+[Boost.Asio 深入解读](#/chapter/content-boost-asio-deep-dive) · [GitHub 文档](content/34.%20Boost%20Asio%20Deep%20Dive/index.zh.md)

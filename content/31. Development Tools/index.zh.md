@@ -15,6 +15,10 @@ tags: [开发工具, OpenCode, Codex, AI Coding Agent, MCP, Skills, GitHub, CI/C
 > 整理日期：2026-09-28  
 > 资料来源：资料库中的 OpenCode / Oh My OpenAgent / Agent 架构文档，以及 OpenAI Codex 官方文档。
 
+## C++ 系统架构实践入口
+
+- [C++ 系统架构实战：所有权、任务调度与异步结果](#/chapter/content-cpp-system-architecture-practice)：智能指针、模板、Promise/Future、锁、CV、线程池、Handler/Runner 与 Java 对照。
+
 ## Jev 与 AI Gateway 实践入口
 
 - [Jev × Cloudflare AI Gateway 验证与接入 SOP](#/chapter/content-jev-cloudflare-ai-gateway)：Cloudflare 调用、最小烟测、验收记录和浏览器代理接入边界。
@@ -25,23 +29,7 @@ OpenCode 与 Codex 都应被当作“受约束的软件工程师”，而不是�
 
 稳定的工作闭环是：
 
-```text
-需求与验收标准
-      ↓
-读取项目规则与 Issue
-      ↓
-只读探索 / 复现问题
-      ↓
-形成计划、边界与风险
-      ↓
-小步修改
-      ↓
-构建、测试、静态检查
-      ↓
-审查 diff 与运行证据
-      ↓
-提交、PR、回滚或发布
-```
+![工程开发闭环](images/engineering-loop-zh.svg)
 
 最重要的工程原则：
 
@@ -74,12 +62,7 @@ OpenCode 与 Codex 都应被当作“受约束的软件工程师”，而不是�
 
 ### 3.1 四层上下文
 
-```mermaid
-flowchart TD
-  A[项目规则] --> B[任务合同]
-  B --> C[工具与 Agent]
-  C --> D[验证与交付]
-```
+![四层工程控制面](images/control-plane-zh.svg)
 
 | 层 | 内容 | 典型文件/入口 |
 | --- | --- | --- |
@@ -137,15 +120,7 @@ Codex 会在任务开始前按全局到项目目录建立指令链；OpenCode �
 
 推荐流程：
 
-```text
-Plan：理解代码、找调用链、提出方案
-  ↓
-人工确认：范围、风险、迁移与回滚
-  ↓
-Build：修改实现、补测试、运行验证
-  ↓
-Review：检查 diff、边界和回归
-```
+![Plan / Build / Review 流程](images/plan-build-review-zh.svg)
 
 小型、局部、低风险修改可以直接 Build；以下情况必须先 Plan：
 
@@ -301,14 +276,7 @@ Plugin 更适合分发 Skills、MCP 和连接器。对你的项目，建议把�
 
 推荐分工：
 
-```text
-主 Agent：维护目标、范围、任务清单与最终整合
-  ├─ Explorer：代码地图与调用链
-  ├─ Researcher：官方文档与兼容性证据
-  ├─ Implementer：按计划修改
-  ├─ Tester：执行测试与故障注入
-  └─ Reviewer：独立检查 diff、风险和回归
-```
+![Agent 协作职责](images/agent-roles-zh.svg)
 
 并行写入时使用独立 worktree；最终由主 Agent 串行合并和验证。
 
@@ -392,9 +360,7 @@ Plugin 更适合分发 Skills、MCP 和连接器。对你的项目，建议把�
 
 ### 7.2 Bug 修复
 
-```text
-复现 → 定位 → 假设 → 最小修复 → 回归测试 → 再现确认
-```
+![Bug 修复流程](images/bugfix-loop-zh.svg)
 
 必须把复现步骤交给 Agent；只给“有 Bug”会导致大量猜测。修复报告至少包含：
 
@@ -409,14 +375,7 @@ Plugin 更适合分发 Skills、MCP 和连接器。对你的项目，建议把�
 
 拆成里程碑：
 
-```text
-M0 代码地图与依赖冻结
-M1 接口/Schema 与兼容策略
-M2 旧实现与新实现并存
-M3 数据或配置迁移
-M4 测试、观测和回滚
-M5 删除旧路径
-```
+![大型重构里程碑](images/refactor-milestones-zh.svg)
 
 任何“删除旧实现”的任务，都必须先证明新路径已被真实流量或完整测试覆盖。
 

@@ -112,34 +112,13 @@ Solution principles:
 When multiple tasks acquire multiple resources at the same time, a unified lock sequence must be defined, for example:
 
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-:Storage;
-:Bus;
-:Device;
-stop
-@enduml
-```
+![3.4 Deadlock and lock sequence](images/1kpknfj.svg)
 
 
 Prohibited:
 
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-#LightBlue:Task A: lock Bus;
-#LightBlue:Task A: lock Device;
-#LightCoral:Task B: lock Device;
-#LightCoral:Task B: lock Bus;
-stop
-@enduml
-```
+![3.4 Deadlock and lock sequence](images/1x6c7rb.svg)
 
 
 More recommended:
@@ -186,24 +165,7 @@ Execution in an ISR should be avoided:
 
 Recommended model:
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-left to right direction
-
-rectangle "Hardware IRQ" as irq
-rectangle "Top-Half ISR\n(Fast Sampling / Clear IRQ Flags)" as topHalf
-rectangle "Lightweight IPC Decoupling\n(Ring Buffer / Task Notification)" as ipc
-rectangle "Bottom-Half Worker Task / State Machine\n(Full Protocol Parsing / State Transition)" as bottomHalf
-rectangle "Business Logic Execution" as biz
-
-irq --> topHalf
-topHalf --> ipc
-ipc --> bottomHalf
-bottomHalf --> biz
-@enduml
-```
+![4.1 ISR design principles](images/1ktawox.svg)
 
 ### 4.2 The length of the critical section determines the lower limit of interrupt response
 
@@ -239,29 +201,11 @@ Even if each task stack is adequate, an MSP that is too small may still be overw
 
 Not recommended:
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-:SysTick ISR;
-:Feed Watchdog;
-stop
-@enduml
-```
+![5.1 Wrong dog feeding position](images/1o1jpe.svg)
 
 It is also not recommended to simply:
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-:Idle Task;
-:Feed Watchdog;
-stop
-@enduml
-```
+![5.1 Wrong dog feeding position](images/prl9xf.svg)
 
 The reason is that the business thread may be deadlocked, but SysTick or Idle still continues to run, and the watchdog will be refreshed with "false health".
 
@@ -269,37 +213,7 @@ The reason is that the business thread may be deadlocked, but SysTick or Idle st
 
 Typical Tickless process:
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "Enter Idle Task" as start
-rectangle "Calculate Next Task Wakeup Time\n(Next Wakeup Tick)" as calc
-rectangle "Sleep Duration\n> Minimum Threshold?" as checkMin
-rectangle "Standard Light Sleep WFI\nKeep SysTick Running" as normalIdle
-rectangle "Configure Low-Power Timer (LPTIM)" as cfgTimer
-rectangle "Stop / Mask Standard SysTick" as stopTick
-rectangle "Atomic Check: Any New Interrupt/Task\nBecame Ready During Setup?" as raceCheck
-rectangle "Abort Sleep Immediately\nRestore SysTick Scheduling" as abortSleep
-rectangle "Execute WFI / WFE (Deep Sleep)" as enterWFI
-rectangle "Hardware Interrupt Wakeup" as wakeup
-rectangle "Compensate OS Ticks from LPTIM Count" as compTime
-rectangle "Restore OS Scheduler & Peripheral Clocks" as resumeOS
-
-start --> calc
-calc --> checkMin
-checkMin --> normalIdle : No
-checkMin --> cfgTimer : Yes
-cfgTimer --> stopTick
-stopTick --> raceCheck
-raceCheck --> abortSleep : Task Ready
-raceCheck --> enterWFI : Safe
-enterWFI --> wakeup
-wakeup --> compTime
-compTime --> resumeOS
-@enduml
-```
+![5.2 Tickless Idle competition window](images/evw8n2.svg)
 
 If an asynchronous event occurs between "computation complete" and the actual execution of `WFI`, and a high-priority task is ready, you need to ensure that the kernel does not enter deep sleep by mistake.
 
@@ -318,23 +232,7 @@ Therefore, the low-power entrance must have:
 
 Recommended layering:
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "Application Layer" as app
-rectangle "Domain / Service Layer" as domain
-rectangle "Driver Interface Layer" as drv
-rectangle "HAL / BSP" as hal
-rectangle "MMIO / Hardware Registers" as mmio
-
-app --> domain : High-level Logic
-domain --> drv : Abstract Device Contract
-drv --> hal : Zero-cost Inlines / Static Config
-hal --> mmio : Direct Reads/Writes
-@enduml
-```
+![6.1 Strict layering + zero-cost abstraction](images/1pas1dw.svg)
 
 For extreme resource MCUs, deep runtime dynamic dispatch should be avoided as much as possible. Can use:
 
@@ -350,34 +248,7 @@ The goal is to have the abstraction removed at compile time so that the final in
 
 Architecture comparison:
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-package "Traditional Model (Heavy SRAM Waste)" as TRAD {
-  rectangle "Module A" as m1
-  rectangle "Task A + Dedicated Stack A" as tA
-  rectangle "Module B" as m2
-  rectangle "Task B + Dedicated Stack B" as tB
-  rectangle "Module C" as m3
-  rectangle "Task C + Dedicated Stack C" as tC
-}
-package "Active Object Pattern (Minimal SRAM Footprint)" as AO {
-  rectangle "Unified Event Queue" as events
-  rectangle "Single Active Object Task (Shared Stack)" as aoTask
-  rectangle "Hierarchical State Machine (HSM)" as hsm
-  rectangle "Run-to-Completion Fast Dispatch" as rtc
-}
-
-m1 --> tA
-m2 --> tB
-m3 --> tC
-events --> aoTask
-aoTask --> hsm
-hsm --> rtc
-@enduml
-```
+![6.2 Active Object + Hierarchical State Machine (HSM)](images/biz0jx.svg)
 
 Core principles:
 
@@ -424,21 +295,7 @@ Avoid runtime division/modulo overhead.
 
 The key principles are:
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "1. Write Data to ring_buffer->data[head]" as wData
-rectangle "2. Execute Memory Barrier (__DMB() / Compiler Barrier)" as dmb
-rectangle "3. Publish Head Pointer: ring_buffer->head = next" as pubHead
-rectangle "4. Notify / Wake Consumer Task" as notify
-
-wData --> dmb
-dmb --> pubHead
-pubHead --> notify
-@enduml
-```
+![7.2 Memory order](images/vrwnzx.svg)
 
 
 In the ARM CMSIS environment, appropriate memory barriers (such as `__DMB()`) can be used according to the target architecture and shared object semantics to prevent consumers from observing index updates before seeing the corresponding data.
@@ -460,16 +317,7 @@ In the ARM CMSIS environment, appropriate memory barriers (such as `__DMB()`) ca
 If the communication relationship is:
 
 
-```plantuml
-@startuml
-skinparam shadowing false
-
-start
-:ISR/Task A;
-:单一 Task B;
-stop
-@enduml
-```
+![8.1 Task Notification Priority Principle](images/qvb8be.svg)
 
 
 And just:
@@ -663,39 +511,7 @@ If the MCU has an MPU, a Guard Region can be deployed at the boundary of the tas
 
 ### 12.1 Architecture
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-package "Task Heartbeats (Independent Bits)" as TASKS {
-  rectangle "Task A (Business Loop)" as tA
-  database "Heartbeat Bitmap Register" as reg
-  rectangle "Task B (Protocol Worker)" as tB
-  rectangle "Task C (Sensor Sampler)" as tC
-}
-rectangle "Watchdog Supervisor Task" as supervisor
-rectangle "All Critical Task Bits\nHealthy & Present?" as check
-rectangle "Feed Hardware Watchdog" as feed
-rectangle "Atomic Clear Heartbeat Bitmap" as clear
-rectangle "Next Supervision Period" as nextPeriod
-rectangle "Refuse to Feed Watchdog" as refuse
-rectangle "Preserve Minimal Crash Context to Backup RAM" as faultSave
-rectangle "Hardware Watchdog Timeout -> Chip Reset" as hwReset
-
-tA --> reg : Atomic set BIT0
-tB --> reg : Atomic set BIT1
-tC --> reg : Atomic set BIT2
-reg --> supervisor
-supervisor --> check
-check --> feed : Yes (All Healthy)
-feed --> clear
-clear --> nextPeriod
-check --> refuse : No (Deadlock / Starvation)
-refuse --> faultSave
-faultSave --> hwReset
-@enduml
-```
+![12.1 Architecture](images/yknkmf.svg)
 
 
 ### 12.2 Principles
@@ -772,33 +588,7 @@ Suggestions:
 
 ## 14. Recommended system-level lightweight architecture
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-package "Application Layer" as L1 {
-  rectangle "HSM / Active Objects / Domain State Machines\n(Run-to-Completion, Non-blocking)" as app
-}
-package "Event & Service Layer" as L2 {
-  rectangle "Task Notification | Event Queue | Timer Events" as events
-}
-package "Minimal RTOS Worker Tasks" as L3 {
-  rectangle "Control Task | I/O Task | Protocol/Storage Task | Supervisor" as workers
-}
-package "Driver / HAL / BSP" as L4 {
-  rectangle "UART | SPI | I2C | ADC | DMA | Flash | WDG" as drivers
-}
-package "Hardware Layer" as L5 {
-  rectangle "MCU Peripherals / Physical Pins / NVIC" as hw
-}
-
-app --> events : Dispatch Events
-events --> workers : Async Wakeup
-workers --> drivers : Non-blocking / DMA
-drivers --> hw : Direct Register MMIO
-@enduml
-```
+![14. Recommended system-level lightweight architecture](images/1fiziw5.svg)
 
 
 ### Recommended thread roles
@@ -874,21 +664,7 @@ Threads are not module boundaries. There can be many modules, but RTOS tasks sho
 
 Priority suggestions:
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "1. Task Notification\n(Lightest: Zero RAM control block, directly uses TCB)" as p1
-rectangle "2. SPSC Ring Buffer\n(Lock-free single-producer single-consumer, minimal overhead)" as p2
-rectangle "3. OS Queue / Semaphore\n(Requires wait-lists & scheduler context switches)" as p3
-rectangle "4. Complex Shared Mutexes / Locks\n(Requires priority inheritance & strict ordering, lowest priority)" as p4
-
-p1 --> p2 : Needs Data Buffering
-p2 --> p3 : Needs Multi-Producer/Consumer
-p3 --> p4 : Avoid When Possible
-@enduml
-```
+![16.3 Lightweight communication primitives](images/1d6akdn.svg)
 
 The premise is that the communication semantics do match, and correctness cannot be sacrificed for the sake of "lightweight".
 
@@ -922,33 +698,7 @@ The final basis for judgment is not "theoretically lighter", but:
 
 ## 17. Recommended verification process
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "1. Define MCU Resource Budget\n(ROM / RAM / Stack / ISR Latency Limits)" as s1
-rectangle "2. Static Design\n(Task Partitioning / Buffer Sizing / IPC Selection)" as s2
-rectangle "3. Compilation & Analysis\n(Generate ELF + .map + .su Static Call Graph)" as s3
-rectangle "4. Static Resource Audit\n(Flash/RAM Utilization & Worst-Case Stack)" as s4
-rectangle "5. Real-Time Instrumentation\n(GPIO/Trace Measurement of ISR / WCET / Latency)" as s5
-rectangle "6. Stress & Peak Load Testing\n(Sustained Maximum Throughput Stability)" as s6
-rectangle "7. Fault Injection Matrix\n(Task Hang / Deadlock / Ring Overflow / Stack Pressure / Burst DMA)" as s7
-rectangle "8. Disaster Recovery Verification\n(Watchdog Action & Backup RAM Context Capture)" as s8
-rectangle "9. Low Power & Timing Verification\n(Tickless Wakeup Timing & Race Window Guards)" as s9
-rectangle "10. Freeze Production Config\n(Disable Debug Hooks & Lock Down Partitions)" as s10
-
-s1 --> s2
-s2 --> s3
-s3 --> s4
-s4 --> s5
-s5 --> s6
-s6 --> s7
-s7 --> s8
-s8 --> s9
-s9 --> s10
-@enduml
-```
+![17. Recommended verification process](images/1jft3uh.svg)
 
 
 ---

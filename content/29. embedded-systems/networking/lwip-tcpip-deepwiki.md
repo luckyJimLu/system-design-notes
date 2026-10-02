@@ -27,39 +27,13 @@ lwIP（Lightweight IP）面向 MCU、RTOS、裸机和资源受限设备，提供
 
 ### NO_SYS=1：裸机/Mainloop
 
-```plantuml
-@startuml
-start
-:ISR;
-:driver queue / flag;
-:main loop;
-:netif->input();
-:sys_check_timeouts();
-stop
-@enduml
-```
+![NOSYS=1：裸机/Mainloop](images/zfqyce.svg)
 
 主循环负责轮询网卡、将数据送入协议栈并持续执行定时器。Raw API 是主要接口。中断服务函数应只完成快速收包、置位或投递，不能在 ISR 中运行复杂协议处理。
 
 ### NO_SYS=0：RTOS/Threaded
 
-```plantuml
-@startuml
-start
-fork
-  :RX thread / ISR bottom-half;
-  :tcpip_input();
-  :tcpip_mbox;
-fork again
-  :app thread;
-  :Netconn / Socket;
-  :api_msg;
-  :tcpip_mbox;
-end fork
-:tcpip_thread;
-stop
-@enduml
-```
+![NOSYS=0：RTOS/Threaded](images/rnarci.svg)
 
 `tcpip_thread` 是协议栈核心串行化上下文。Raw API 也必须在 core context 中使用；其他线程应通过 `tcpip_callback()`、消息机制或正确配置的 core locking 进入协议栈。
 
@@ -133,39 +107,11 @@ dhcp_start(&netif);         /* 或使用静态地址 */
 
 ### Ethernet RX
 
-```plantuml
-@startuml
-start
-:MAC / PHY;
-:DMA RX descriptor;
-:driver alloc / fill pbuf;
-:tcpip_input(p, netif);
-:tcpip_mbox;
-:tcpip_thread;
-:ethernet_input();
-:ARP / IP;
-:TCP / UDP / RAW;
-:callback 或 netconn / socket 唤醒;
-stop
-@enduml
-```
+![Ethernet RX](images/1m8h57w.svg)
 
 ### Ethernet TX
 
-```plantuml
-@startuml
-start
-:application;
-:tcp_write / udp_send / send;
-:IP output;
-:netif->output;
-:netif->linkoutput;
-:driver maps / copies pbuf chain;
-:DMA TX;
-:MAC / PHY;
-stop
-@enduml
-```
+![Ethernet TX](images/1f7x2wf.svg)
 
 抓包排障时，应按“驱动/PHY/DMA → `tcpip_input` → Ethernet/IP → TCP/UDP → 应用回调”的顺序定位。RX 没有报文先查硬件、DMA、CRC 和 ring；报文已到但协议栈无响应，再查 netif flags、checksum、ARP/ND、core context 和内存池。
 
@@ -199,28 +145,7 @@ altcp 通过可叠加的连接层抽象 TCP，可在 Raw 风格 callback 上插�
 
 PPPoS 适合蜂窝 Modem 数据面：AT 命令负责拨号和进入数据模式，UART 字节流交给 PPP 状态机，完成 IPCP/IPv6CP 后形成 lwIP netif。
 
-```plantuml
-@startuml
-start
-:AT command mode;
-:dial / CONNECT;
-:PPP data mode;
-fork
-  :UART RX;
-  :pppos_input[_tcpip]();
-  :PPP FSM;
-  :IPCP / IPv6CP;
-  :netif;
-  :IP;
-fork again
-  :IP;
-  :PPP output;
-  :UART TX;
-  :modem;
-end fork
-stop
-@enduml
-```
+![11. altcp、TLS 与 PPPoS](images/199caz4.svg)
 
 AT 控制流和 PPP 数据流必须有明确的命令模式/数据模式状态机，不能并行交给同一个解析器。
 

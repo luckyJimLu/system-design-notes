@@ -37,30 +37,7 @@ Adopt:
 5. **Batch Write to Disk**: Use FatFs to write continuous data directly to storage.
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-left to right direction
-
-rectangle "Modem 日志" as M
-rectangle "lwIP TCP Socket" as L
-rectangle "唯一 Socket 接收线程" as R
-rectangle "协议解析与分流" as P
-rectangle "静态 SPSC 环形缓冲区" as B
-rectangle "命令状态机" as C
-rectangle "低优先级写盘线程" as W
-rectangle "FatFs / SD卡" as F
-
-M --> L
-L --> R
-R --> P
-P --> B : 日志 payload
-P --> C : 命令响应
-B --> W
-W --> F
-@enduml
-```
+![3. Recommended architecture](images/apctnz.svg)
 
 
 This only requires an additional execution context. If the system already has a unified storage thread, there is no need to add a new thread.
@@ -310,25 +287,7 @@ Otherwise, the two threads may grab each other's data, and TCP is a byte stream,
 A unique receiving thread and an incremental parsing state machine must be used:
 
 
-```plantuml
-@startuml
-hide empty description
-skinparam shadowing false
-
-state "ReadHeader" as ReadHeader
-state "ReadResponse" as ReadResponse
-state "ReadLog" as ReadLog
-state "ReadIndication" as ReadIndication
-
-[*] --> ReadHeader
-ReadHeader --> ReadResponse : 命令响应
-ReadHeader --> ReadLog : 日志IND
-ReadHeader --> ReadIndication : 普通IND
-ReadResponse --> ReadHeader : 消息完成
-ReadLog --> ReadHeader : payload完成
-ReadIndication --> ReadHeader : 消息完成
-@enduml
-```
+![8. Protocol offloading of the same Socket](images/1fyddg7.svg)
 
 
 Must be processed when parsing:
@@ -473,23 +432,7 @@ Both Socket's `recv()` and FatFs' `f_write()` may block. The design goal is not 
 | write disk thread | Waiting for task notification, `f_write()`, `f_sync()` | The Socket thread continues to receive data |
 
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "Socket接收线程" as RX
-rectangle "lwIP Socket" as S
-rectangle "SPSC环形缓冲区" as R
-rectangle "写盘线程" as W
-rectangle "FatFs / SD卡" as D
-
-RX --> S : recv阻塞等待数据
-RX --> R : 收到数据后发布write_seq
-R --> W
-W --> D : f_write阻塞
-@enduml
-```
+![15.1 Core Principles](images/su1o34.svg)
 
 
 Two threads cannot hold a common large lock, and the file system driver cannot turn off interrupts for a long time during disk writing.

@@ -17,40 +17,7 @@
 
 ## 2. 模块与任务映射
 
-```plantuml
-@startuml
-hide stereotype
-skinparam shadowing false
-
-rectangle "DiagnosticApi" as api
-package "SocketReactor 任务" as reactorTask {
-  rectangle "SessionCoordinator" as coordinator
-  rectangle "SocketReactor" as reactor
-  rectangle "LogSession" as log
-  rectangle "ChrSession" as chr
-}
-rectangle "Log 与 CHR 专用环" as rings
-rectangle "已有 lwIP RX / TX 上下文" as hooks
-rectangle "CaptureTap 与 CaptureGate" as tap
-rectangle "独立 RX / TX 快照环" as cap
-rectangle "StorageOwner 任务" as storage
-rectangle "FatFsPort 与三个文件会话" as files
-
-api --> coordinator : 固定请求槽
-coordinator --> reactor
-reactor --> log
-reactor --> chr
-log --> rings
-chr --> rings
-hooks --> tap
-tap --> cap
-coordinator --> storage : 存储命令槽
-rings --> storage
-cap --> storage
-storage --> files
-storage ..> coordinator : 保留至确认的结果槽
-@enduml
-```
+![2. 模块与任务映射](images/1xvu1z0.svg)
 
 | C++ 类型 | 责任与状态 | 调用上下文 | 禁止事项 |
 |---|---|---|---|
@@ -258,24 +225,7 @@ extern "C" err_t diag_rx_input(struct pbuf* p, struct netif* n)
 
 ### 7.1 先准备文件，再允许生产
 
-```plantuml
-@startuml
-    participant "应用" as app
-    participant "Coordinator及Reactor" as ctl
-    participant "StorageOwner" as disk
-    participant "Socket会话或CaptureGate" as source
-    app ->> ctl : 提交 Start 请求
-    ctl ->> disk : PrepareFile 与 generation
-    disk -->> ctl : 保留完成结果
-    alt 文件准备成功
-        ctl ->> source : 非阻塞连接或启用快照
-        source -->> ctl : READY 或连接完成
-        ctl -->> app : 请求完成为 RUNNING
-    else 文件准备失败
-        ctl -->> app : 请求完成为 FAULTED
-    end
-@enduml
-```
+![7.1 先准备文件，再允许生产](images/1sqmnz8.svg)
 
 图中的 Coordinator 和 Reactor 在同一个任务；与 SocketSession 的交互是短方法调用，不是额外线程。`connect` 也必须采用非阻塞状态机：进行中只登记可写事件和截止时间，完成时查 Socket 错误；不能在 Start 内阻塞数秒。用固定 IPC 地址可避免额外 DNS 等待。
 
@@ -289,20 +239,7 @@ Log 高水位仅停止该 fd 的 read interest；停止读会增加对端压力�
 
 ### 7.3 CHR：按确认等级返回结果
 
-```plantuml
-@startuml
-    participant "Modem CHR" as modem
-    participant "ChrSession及Reactor" as rx
-    participant "CHR专用环" as ring
-    participant "StorageOwner" as disk
-    modem ->> rx : 有序消息字节流
-    rx ->> ring : 完整记录或有界分段发布
-    ring ->> disk : 按序消费
-    disk ->> disk : 写入并按策略同步
-    disk -->> rx : 同步检查点与 generation
-    rx -->> modem : 协议允许时发送持久化 ACK
-@enduml
-```
+![7.3 CHR：按确认等级返回结果](images/c6i0c.svg)
 
 这是“CHR需要持久化确认”时的可选协议，不是假定所有CHR都如此。Storage 不调用 send，只返回同步进度；Reactor 生成 ACK 并用有限发送队列处理短发送。
 
