@@ -3,6 +3,7 @@ import { Menu, Search, BookMarked, Languages } from 'lucide-react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
 import { truncateTitle } from '../utils/title';
+import { getBookForChapter } from '../data/books';
 
 interface NavbarProps {
   onToggleMobileSidebar: () => void;
@@ -80,12 +81,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             ) : currentChapter ? (
               <div className="flex items-center gap-1.5 text-xs sm:text-sm truncate">
-                {currentChapter.volume !== 0 && (
-                  <span className="font-mono text-neutral-400 text-xs shrink-0 font-medium">
-                    {language === 'zh' ? `第${currentChapter.number}章` : `Ch ${currentChapter.number}`}
-                    <span className="mx-1.5 text-neutral-300">/</span>
-                  </span>
-                )}
+                {(() => {
+                  const book = getBookForChapter(currentChapter);
+                  const bookBadge = language === 'zh' ? book.badgeZh : book.badgeEn;
+                  const bookTitle = language === 'zh' ? book.titleZh : book.titleEn;
+                  return (
+                    <span
+                      className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-neutral-100 text-neutral-600 border border-neutral-200/70 shrink-0"
+                      title={bookTitle}
+                    >
+                      {bookBadge}
+                    </span>
+                  );
+                })()}
+                <span className="font-mono text-neutral-400 text-xs shrink-0 font-medium">
+                  {language === 'zh' ? `第${currentChapter.number}章` : `Ch ${currentChapter.number}`}
+                  <span className="mx-1.5 text-neutral-300">/</span>
+                </span>
                 <span
                   className="font-medium text-neutral-900 truncate"
                   title={language === 'zh' ? currentChapter.titleZh || currentChapter.title : currentChapter.title}

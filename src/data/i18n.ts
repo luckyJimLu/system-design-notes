@@ -10,9 +10,13 @@ export interface UIStrings {
     all: string;
     vol1: string;
     vol2: string;
-    modem: string;
+    boostAsio: string;
+    cppConcurrency: string;
+    cppArch: string;
+    embedded: string;
     developerTools: string;
     saved: string;
+    modem: string;
   };
   sidebar: {
     noSaved: string;
@@ -120,9 +124,13 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       all: 'All',
       vol1: 'Vol 1',
       vol2: 'Vol 2',
-      modem: 'Embedded / RTOS',
-      developerTools: 'Developer Tools',
-      saved: 'Saved'
+      boostAsio: 'Boost.Asio',
+      cppConcurrency: 'C++ Concurrency',
+      cppArch: 'C++ Arch',
+      embedded: 'Embedded',
+      developerTools: 'Tools',
+      saved: 'Saved',
+      modem: 'Embedded'
     },
     sidebar: {
       noSaved: 'No chapters bookmarked yet. Click the bookmark icon on any chapter to save it here.',
@@ -228,9 +236,13 @@ export const I18N_STRINGS: Record<Language, UIStrings> = {
       all: '全部',
       vol1: '第一卷',
       vol2: '第二卷',
-      modem: '嵌入式',
+      boostAsio: 'Boost.Asio',
+      cppConcurrency: 'C++ 并发',
+      cppArch: 'C++ 架构',
+      embedded: '嵌入式',
       developerTools: '开发工具',
-      saved: '收藏夹'
+      saved: '收藏夹',
+      modem: '嵌入式'
     },
     sidebar: {
       noSaved: '暂无收藏章节。点击章节右上角的书签图标即可收藏。',

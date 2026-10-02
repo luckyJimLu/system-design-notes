@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Chapter, Language } from '../types';
 import { I18N_STRINGS } from '../data/i18n';
 import { truncateTitle } from '../utils/title';
+import { BOOKS, BOOK_ORDER, BookKey, getBookIdForChapter, getBookForChapter } from '../data/books';
 import {
   CheckCircle2,
   Bookmark,
@@ -10,7 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  BookOpen,
 } from 'lucide-react';
+
+export type SidebarTab = 'all' | BookKey | 'saved';
 
 interface SidebarProps {
   chapters: Chapter[];
@@ -45,28 +49,212 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false,
   onToggleCollapsed,
 }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'vol1' | 'vol2' | 'modem' | 'tools' | 'saved'>('all');
+  const [activeTab, setActiveTab] = useState<SidebarTab>('all');
+  const tabListRef = useRef<HTMLDivElement>(null);
   const t = I18N_STRINGS[language];
 
+  // Count chapters for each book
+  const bookCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: chapters.length, saved: bookmarks.size };
+    for (const b of BOOK_ORDER) {
+      counts[b] = 0;
+    }
+    for (const ch of chapters) {
+      const bId = getBookIdForChapter(ch);
+      counts[bId] = (counts[bId] || 0) + 1;
+    }
+    return counts;
+  }, [chapters, bookmarks.size]);
+
+  // Synchronize activeTab when current chapter changes to another book (if not in 'all' or 'saved')
+  useEffect(() => {
+    if (currentChapterId && activeTab !== 'all' && activeTab !== 'saved') {
+      const ch = chapters.find(c => c.id === currentChapterId);
+      if (ch) {
+        const bId = getBookIdForChapter(ch);
+        if (bId !== activeTab) {
+          setActiveTab(bId);
+        }
+      }
+    }
+  }, [currentChapterId, chapters]);
+
+  // Ensure active tab is visible in scroll container
+  useEffect(() => {
+    if (tabListRef.current) {
+      const activeEl = tabListRef.current.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (activeEl && typeof activeEl.scrollIntoView === 'function') {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    }
+  }, [activeTab]);
+
   // Filter chapters based on active tab
-  const filteredChapters = chapters.filter(c => {
-    if (activeTab === 'vol1' && c.volume !== 1) return false;
-    if (activeTab === 'vol2' && c.volume !== 2) return false;
-    if (activeTab === 'modem' && c.volume !== 0) return false;
-    if (activeTab === 'tools' && c.category !== 'developer-tools') return false;
-    if (activeTab === 'saved' && !bookmarks.has(c.id)) return false;
-    return true;
-  });
+  const filteredChapters = useMemo(() => {
+    if (activeTab === 'saved') {
+      return chapters.filter(c => bookmarks.has(c.id));
+    }
+    if (activeTab === 'all') {
+      return chapters;
+    }
+    return chapters.filter(c => getBookIdForChapter(c) === activeTab);
+  }, [chapters, activeTab, bookmarks]);
+
+  // Group chapters by book for 'all' tab
+  const chaptersByBook = useMemo(() => {
+    const map = new Map<BookKey, Chapter[]>();
+    for (const b of BOOK_ORDER) {
+      map.set(b, []);
+    }
+    for (const ch of chapters) {
+      const bId = getBookIdForChapter(ch);
+      const list = map.get(bId) || [];
+      list.push(ch);
+      map.set(bId, list);
+    }
+    return map;
+  }, [chapters]);
 
   const completedCount = completed.size;
   const progressPercent = chapters.length === 0
     ? 0
     : Math.min(100, Math.round((completedCount / chapters.length) * 100));
 
-  const vol1Count = chapters.filter(c => c.volume === 1).length;
-  const vol2Count = chapters.filter(c => c.volume === 2).length;
-  const modemCount = chapters.filter(c => c.volume === 0).length;
-  const developerToolsCount = chapters.filter(c => c.category === 'developer-tools').length;
+  const tabItems: { id: SidebarTab; label: string; count: number; icon?: typeof Bookmark }[] = [
+    { id: 'all', label: t.tabs.all, count: chapters.length },
+    { id: 'vol1', label: t.tabs.vol1, count: bookCounts['vol1'] || 0 },
+    { id: 'vol2', label: t.tabs.vol2, count: bookCounts['vol2'] || 0 },
+    { id: 'boost-asio', label: t.tabs.boostAsio, count: bookCounts['boost-asio'] || 0 },
+    { id: 'cpp-concurrency', label: t.tabs.cppConcurrency, count: bookCounts['cpp-concurrency'] || 0 },
+    { id: 'cpp-arch', label: t.tabs.cppArch, count: bookCounts['cpp-arch'] || 0 },
+    { id: 'embedded', label: t.tabs.embedded, count: bookCounts['embedded'] || 0 },
+    { id: 'tools', label: t.tabs.developerTools, count: bookCounts['tools'] || 0 },
+    { id: 'saved', label: t.tabs.saved, count: bookmarks.size, icon: Bookmark },
+  ];
+
+  const handleTabKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const currentIndex = tabItems.findIndex(tab => tab.id === activeTab);
+      const nextIndex = e.key === 'ArrowRight'
+        ? (currentIndex + 1) % tabItems.length
+        : (currentIndex - 1 + tabItems.length) % tabItems.length;
+      setActiveTab(tabItems[nextIndex].id);
+    }
+  };
+
+  const renderChapterItem = (ch: Chapter) => {
+    const isActive = !isCurrentViewResources && currentChapterId === ch.id;
+    const isCompleted = completed.has(ch.id);
+    const isBookmarked = bookmarks.has(ch.id);
+    const fullTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
+    const chTitle = truncateTitle(fullTitle);
+    const book = getBookForChapter(ch);
+    const bookBadge = language === 'zh' ? book.badgeZh : book.badgeEn;
+
+    if (isCollapsed) {
+      return (
+        <div key={ch.id} className="relative flex justify-center py-1">
+          <button
+            type="button"
+            aria-current={isActive ? 'page' : undefined}
+            onClick={() => {
+              onSelectChapter(ch.id);
+              if (isOpenMobile) onCloseMobile();
+            }}
+            title={`${bookBadge} · ${ch.number}. ${fullTitle}`}
+            className={`w-8 h-8 rounded-md flex items-center justify-center font-mono text-xs font-semibold transition-all relative group focus-visible:ring-2 focus-visible:ring-neutral-900 ${
+              isActive
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+            }`}
+          >
+            {ch.number}
+            {isBookmarked && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500" />
+            )}
+            {!isBookmarked && isCompleted && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500" />
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={ch.id}
+        id={`sidebar-chapter-${ch.id}`}
+        className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors text-xs ${
+          isActive
+            ? 'bg-neutral-100 text-neutral-900 font-medium'
+            : 'hover:bg-neutral-50 text-neutral-700'
+        }`}
+      >
+        <button
+          type="button"
+          aria-current={isActive ? 'page' : undefined}
+          onClick={() => {
+            onSelectChapter(ch.id);
+            if (isOpenMobile) onCloseMobile();
+          }}
+          className="flex items-center gap-2 min-w-0 pr-2 flex-1 text-left focus-visible:outline-none"
+        >
+          <span
+            className={`shrink-0 w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] font-semibold transition-colors ${
+              isActive
+                ? 'bg-neutral-900 text-white'
+                : 'bg-neutral-100 text-neutral-600 group-hover:bg-neutral-200'
+            }`}
+          >
+            {ch.number}
+          </span>
+
+          <span className="truncate leading-normal" title={fullTitle}>
+            {chTitle}
+          </span>
+        </button>
+
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              onToggleBookmark(ch.id);
+            }}
+            className={`p-1 rounded transition-colors ${
+              isBookmarked
+                ? 'text-amber-600'
+                : 'text-neutral-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-neutral-700'
+            }`}
+            aria-label={isBookmarked ? (language === 'zh' ? '取消收藏' : 'Remove Bookmark') : (language === 'zh' ? '收藏章节' : 'Bookmark Chapter')}
+            title={isBookmarked ? (language === 'zh' ? '取消收藏' : 'Remove Bookmark') : (language === 'zh' ? '收藏章节' : 'Bookmark Chapter')}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current' : ''}`} />
+          </button>
+
+          <button
+            type="button"
+            onClick={e => {
+              e.stopPropagation();
+              onToggleCompleted(ch.id);
+            }}
+            className={`p-1 rounded transition-colors ${
+              isCompleted
+                ? 'text-emerald-600'
+                : 'text-neutral-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-neutral-700'
+            }`}
+            aria-label={isCompleted ? (language === 'zh' ? '标记未读' : 'Mark as Incomplete') : (language === 'zh' ? '标记已读' : 'Mark as Read')}
+            title={isCompleted ? (language === 'zh' ? '标记未读' : 'Mark as Incomplete') : (language === 'zh' ? '标记已读' : 'Mark as Read')}
+          >
+            <CheckCircle2 className={`w-3.5 h-3.5 ${isCompleted ? 'fill-emerald-100' : ''}`} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const activeBook = activeTab in BOOKS ? BOOKS[activeTab as BookKey] : null;
 
   return (
     <>
@@ -162,100 +350,73 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
+        {/* Book Tabs List */}
         {!isCollapsed && (
           <div className="p-2 border-b border-neutral-200/80 bg-neutral-50/60">
-            <div role="tablist" className="flex gap-1 p-0.5 bg-neutral-200/60 rounded-lg text-xs font-medium overflow-x-auto">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'all'}
-                onClick={() => setActiveTab('all')}
-                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                  activeTab === 'all'
-                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-                title={`${t.tabs.all} (${chapters.length})`}
-              >
-                <span className="truncate">{t.tabs.all}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'vol1'}
-                onClick={() => setActiveTab('vol1')}
-                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                  activeTab === 'vol1'
-                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-                title={`${t.tabs.vol1} (${vol1Count})`}
-              >
-                <span>{t.tabs.vol1}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'vol2'}
-                onClick={() => setActiveTab('vol2')}
-                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                  activeTab === 'vol2'
-                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-                title={`${t.tabs.vol2} (${vol2Count})`}
-              >
-                <span>{t.tabs.vol2}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'modem'}
-                onClick={() => setActiveTab('modem')}
-                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                  activeTab === 'modem'
-                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-                title={`${t.tabs.modem} (${modemCount})`}
-              >
-                <span>{t.tabs.modem}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'tools'}
-                onClick={() => setActiveTab('tools')}
-                className={`shrink-0 px-2 py-1 rounded-md transition-all text-center ${
-                  activeTab === 'tools'
-                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-                title={`${t.tabs.developerTools} (${developerToolsCount})`}
-              >
-                <span className="truncate">{t.tabs.developerTools}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === 'saved'}
-                onClick={() => setActiveTab('saved')}
-                className={`shrink-0 px-2 py-1 rounded-md transition-all flex items-center justify-center gap-1 ${
-                  activeTab === 'saved'
-                    ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
-                }`}
-                title={`${t.tabs.saved} (${bookmarks.size})`}
-              >
-                <Bookmark className="w-3 h-3 fill-current" />
-                <span>{bookmarks.size}</span>
-              </button>
+            <div
+              ref={tabListRef}
+              role="tablist"
+              aria-label={language === 'zh' ? '书籍分类与标签切换' : 'Book and category tabs'}
+              onKeyDown={handleTabKeyDown}
+              className="flex gap-1 p-0.5 bg-neutral-200/60 rounded-lg text-xs font-medium overflow-x-auto scrollbar-none"
+            >
+              {tabItems.map(tab => {
+                const isSelected = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`shrink-0 px-2 py-1 rounded-md transition-all text-center flex items-center gap-1.5 whitespace-nowrap ${
+                      isSelected
+                        ? 'bg-white text-neutral-900 font-semibold shadow-2xs'
+                        : 'text-neutral-600 hover:text-neutral-900'
+                    }`}
+                    title={`${tab.label} (${tab.count})`}
+                  >
+                    {tab.icon && <tab.icon className={`w-3 h-3 ${isSelected ? 'fill-current' : ''}`} />}
+                    <span>{tab.label}</span>
+                    <span
+                      className={`text-[10px] font-mono px-1 rounded-full ${
+                        isSelected
+                          ? 'bg-neutral-100 text-neutral-800'
+                          : 'bg-neutral-300/50 text-neutral-600'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Chapter List */}
+        {/* Chapter List Area */}
         <div className={`flex-1 overflow-y-auto space-y-0.5 ${isCollapsed ? 'p-1.5' : 'p-2'}`}>
+          {/* Active Book Header Info (when a specific book is selected) */}
+          {!isCollapsed && activeBook && activeTab !== 'all' && activeTab !== 'saved' && (
+            <div className="p-2.5 mb-2 rounded-lg bg-neutral-50/90 border border-neutral-200/70">
+              <div className="flex items-center justify-between gap-1.5 mb-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <BookOpen className="w-3.5 h-3.5 text-neutral-700 shrink-0" />
+                  <span className="font-semibold text-xs text-neutral-900 truncate">
+                    {language === 'zh' ? activeBook.titleZh : activeBook.titleEn}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white text-neutral-600 border border-neutral-200/80 shrink-0">
+                  {filteredChapters.length} {language === 'zh' ? '篇' : 'chs'}
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-500 leading-relaxed line-clamp-2">
+                {language === 'zh' ? activeBook.descriptionZh : activeBook.descriptionEn}
+              </p>
+            </div>
+          )}
+
+          {/* Empty State */}
           {filteredChapters.length === 0 ? (
             !isCollapsed ? (
               <div className="py-12 text-center text-xs text-neutral-400">
@@ -264,118 +425,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   : t.sidebar.noMatches}
               </div>
             ) : null
-          ) : (
-            filteredChapters.map(ch => {
-              const isActive = !isCurrentViewResources && currentChapterId === ch.id;
-              const isCompleted = completed.has(ch.id);
-              const isBookmarked = bookmarks.has(ch.id);
-              const fullTitle = language === 'zh' ? (ch.titleZh || ch.title) : ch.title;
-              const chTitle = truncateTitle(fullTitle);
-
-              if (isCollapsed) {
-                return (
-                  <div key={ch.id} className="relative flex justify-center py-1">
-                    <button
-                      type="button"
-                      aria-current={isActive ? 'page' : undefined}
-                      onClick={() => {
-                        onSelectChapter(ch.id);
-                        if (isOpenMobile) onCloseMobile();
-                      }}
-                      title={`${ch.number}. ${fullTitle}`}
-                      className={`w-8 h-8 rounded-md flex items-center justify-center font-mono text-xs font-semibold transition-all relative group focus-visible:ring-2 focus-visible:ring-neutral-900 ${
-                        isActive
-                          ? 'bg-neutral-900 text-white shadow-xs'
-                          : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                      }`}
-                    >
-                      {ch.number}
-                      {/* Sub-dot for bookmark / completion status */}
-                      {isBookmarked && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500" />
-                      )}
-                      {!isBookmarked && isCompleted && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500" />
-                      )}
-                    </button>
-                  </div>
-                );
-              }
-
+          ) : activeTab === 'all' && !isCollapsed ? (
+            /* Grouped Book View for 'all' tab */
+            BOOK_ORDER.map(bKey => {
+              const bookChapters = chaptersByBook.get(bKey) || [];
+              if (bookChapters.length === 0) return null;
+              const book = BOOKS[bKey];
+              const bookTitle = language === 'zh' ? book.titleZh : book.titleEn;
               return (
-                <div
-                  key={ch.id}
-                  id={`sidebar-chapter-${ch.id}`}
-                  className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-md transition-colors text-xs ${
-                    isActive
-                      ? 'bg-neutral-100 text-neutral-900 font-medium'
-                      : 'hover:bg-neutral-50 text-neutral-700'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    aria-current={isActive ? 'page' : undefined}
-                    onClick={() => {
-                      onSelectChapter(ch.id);
-                      if (isOpenMobile) onCloseMobile();
+                <div key={bKey} className="pt-2 first:pt-0">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTab(bKey)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveTab(bKey);
+                      }
                     }}
-                    className="flex items-center gap-2.5 min-w-0 pr-2 flex-1 text-left focus-visible:outline-none"
+                    className="flex items-center justify-between px-2 py-1 mb-1 rounded text-[11px] font-semibold text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/80 cursor-pointer transition-colors group"
+                    title={language === 'zh' ? `点击切换到《${bookTitle}》标签` : `Switch to ${bookTitle} tab`}
                   >
-                    {/* Compact Chapter Indicator */}
-                    <span
-                      className={`shrink-0 w-5 h-5 rounded flex items-center justify-center font-mono text-[10px] font-semibold transition-colors ${
-                        isActive
-                          ? 'bg-neutral-900 text-white'
-                          : 'bg-neutral-100 text-neutral-600 group-hover:bg-neutral-200'
-                      }`}
-                    >
-                      {ch.number}
+                    <span className="truncate flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-400 group-hover:bg-neutral-900 transition-colors" />
+                      {bookTitle}
                     </span>
-
-                    <span className="truncate leading-normal" title={fullTitle}>
-                      {chTitle}
+                    <span className="font-mono text-[10px] text-neutral-400 group-hover:text-neutral-700 shrink-0 ml-1.5">
+                      {bookChapters.length} {language === 'zh' ? '篇' : 'chs'}
                     </span>
-                  </button>
-
-                  {/* Read / Bookmark Status Controls */}
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        onToggleBookmark(ch.id);
-                      }}
-                      className={`p-1 rounded transition-colors ${
-                        isBookmarked
-                          ? 'text-amber-600'
-                          : 'text-neutral-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-neutral-700'
-                      }`}
-                      aria-label={isBookmarked ? (language === 'zh' ? '取消收藏' : 'Remove Bookmark') : (language === 'zh' ? '收藏章节' : 'Bookmark Chapter')}
-                      title={isBookmarked ? (language === 'zh' ? '取消收藏' : 'Remove Bookmark') : (language === 'zh' ? '收藏章节' : 'Bookmark Chapter')}
-                    >
-                      <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current' : ''}`} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        onToggleCompleted(ch.id);
-                      }}
-                      className={`p-1 rounded transition-colors ${
-                        isCompleted
-                          ? 'text-emerald-600'
-                          : 'text-neutral-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-neutral-700'
-                      }`}
-                      aria-label={isCompleted ? (language === 'zh' ? '标记未读' : 'Mark as Incomplete') : (language === 'zh' ? '标记已读' : 'Mark as Read')}
-                      title={isCompleted ? (language === 'zh' ? '标记未读' : 'Mark as Incomplete') : (language === 'zh' ? '标记已读' : 'Mark as Read')}
-                    >
-                      <CheckCircle2 className={`w-3.5 h-3.5 ${isCompleted ? 'fill-emerald-100' : ''}`} />
-                    </button>
+                  </div>
+                  <div className="space-y-0.5">
+                    {bookChapters.map(renderChapterItem)}
                   </div>
                 </div>
               );
             })
+          ) : (
+            /* Flat filtered list for specific book, saved tab, or collapsed mode */
+            filteredChapters.map(renderChapterItem)
           )}
         </div>
 

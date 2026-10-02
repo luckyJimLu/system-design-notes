@@ -7,6 +7,7 @@ import { resolveImageUrl } from '../content/catalog';
 import { isTextFlowchart, TextFlowchart } from '../renderers/TextFlowchart';
 import { builtinRendererRegistry } from '../renderers/registry';
 import { I18N_STRINGS } from '../data/i18n';
+import { getBookForChapter } from '../data/books';
 import { truncateTitle } from '../utils/title';
 import { slugify, extractTextFromChildren, hashString } from '../utils/slug';
 import { MermaidDiagram } from './MermaidDiagram';
@@ -176,13 +177,19 @@ export const ChapterViewer: React.FC<ChapterViewerProps> = ({
         {/* Meta badges & Action Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2 py-0.5 text-xs font-semibold rounded bg-neutral-100 text-neutral-800 border border-neutral-200/80 font-mono">
-              {chapter.volume === 1
-                ? t.chapter.vol1
-                : chapter.volume === 2
-                ? t.chapter.vol2
-                : t.chapter.modem}
-            </span>
+            {(() => {
+              const book = getBookForChapter(chapter);
+              const bookBadge = language === 'zh' ? book.badgeZh : book.badgeEn;
+              const bookTitle = language === 'zh' ? book.titleZh : book.titleEn;
+              return (
+                <span
+                  className="px-2 py-0.5 text-xs font-semibold rounded bg-neutral-100 text-neutral-800 border border-neutral-200/80 font-mono"
+                  title={bookTitle}
+                >
+                  {bookBadge}
+                </span>
+              );
+            })()}
 
             <span className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
               <Clock className="w-3.5 h-3.5 text-neutral-400" />

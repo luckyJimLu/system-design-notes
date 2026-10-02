@@ -1,6 +1,7 @@
 import type { Chapter } from '../types';
 import { parseFrontMatter, contentId, contentTitle, validateContentMetadata } from './frontmatter';
 import type { ContentDiagnostic } from './diagnostics';
+import { getBookIdForChapter } from '../data/books';
 
 const contentModules = import.meta.glob<string>('../../content/**/index*.md', {
   query: '?raw',
@@ -45,15 +46,20 @@ export function loadImportedContentWithDiagnostics(): ImportedContentResult {
     const category: Chapter['category'] = parsed.data.category === 'developer-tools'
       ? 'developer-tools'
       : 'specialized';
+    const folderName = path.split('/')[path.split('/').length - 2] || '';
+    const bookId = typeof parsed.data.book === 'string'
+      ? parsed.data.book
+      : getBookIdForChapter({ id, folderName, number, category });
     const document: Chapter = {
       id: `content-${id}`,
-      folderName: path.split('/')[path.split('/').length - 2] || '',
+      folderName,
       fileName: path.split('/')[path.split('/').length - 1] || '',
       number,
       title: locale === 'en' ? title : titleEn,
       titleZh: locale === 'zh' ? title : title,
       volume: 0,
       category,
+      bookId,
       description: typeof parsed.data.description === 'string' ? parsed.data.description : '',
       descriptionZh: typeof parsed.data.descriptionZh === 'string' ? parsed.data.descriptionZh : '',
       tags,

@@ -16,6 +16,7 @@ export interface Chapter {
   titleZh?: string;
   volume: 1 | 2 | 0; // 1 = Vol 1, 2 = Vol 2, 0 = Modemlog/Embedded/Other
   category: 'core' | 'distributed-storage' | 'real-time-apps' | 'infrastructure' | 'specialized' | 'embedded-systems' | 'developer-tools';
+  bookId?: string;
   description: string;
   descriptionZh?: string;
   tags: string[];

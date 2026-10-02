@@ -561,9 +561,11 @@ def generate_frontmatter(
     order: int,
     category: str,
     description: str,
-    tags: list[str]
+    tags: list[str],
+    book: str = ""
 ) -> str:
     tag_str = ', '.join(f'"{t}"' for t in tags)
+    book_line = f"book: {book}\n" if book else ""
     return (
         f"---\n"
         f"id: {doc_id}\n"
@@ -571,6 +573,7 @@ def generate_frontmatter(
         f"titleEn: \"{title_en}\"\n"
         f"order: {order}\n"
         f"category: {category}\n"
+        f"{book_line}"
         f"description: \"{description}\"\n"
         f"tags: [{tag_str}]\n"
         f"---\n\n"
@@ -692,7 +695,8 @@ def process_book(pdf_name: str, config: dict, start_order: int) -> int:
             order=order,
             category='specialized',
             description=ch['desc_en'],
-            tags=ch['tags_en']
+            tags=ch['tags_en'],
+            book=book_slug
         )
         
         # Frontmatter for ZH
@@ -703,7 +707,8 @@ def process_book(pdf_name: str, config: dict, start_order: int) -> int:
             order=order,
             category='specialized',
             description=ch['desc_zh'],
-            tags=ch['tags_zh']
+            tags=ch['tags_zh'],
+            book=book_slug
         )
         
         # Write index.en.md

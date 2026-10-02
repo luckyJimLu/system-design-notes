@@ -702,6 +702,7 @@ export function getChapters(): Chapter[] {
         titleZh: meta.titleZh,
         volume: meta.volume,
         category: meta.category,
+        bookId: num <= 15 ? 'vol1' : 'vol2',
         description: meta.description,
         descriptionZh: meta.descriptionZh,
         tags: meta.tags,
@@ -800,6 +801,7 @@ export function getChapters(): Chapter[] {
       titleZh: info?.titleZh || cleanTitle,
       volume: 0,
       category: 'embedded-systems',
+      bookId: 'embedded',
       description:
         info?.descEn ||
         'In-depth embedded firmware, RTOS, and dual netif networking architecture design document.',

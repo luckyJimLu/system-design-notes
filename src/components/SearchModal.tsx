@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, X, ArrowRight } from 'lucide-react';
 import { Chapter, Language } from '../types';
 import { truncateTitle } from '../utils/title';
+import { getBookForChapter } from '../data/books';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -299,12 +300,22 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className="text-sm font-semibold text-neutral-900 truncate">
-                        {ch.volume !== 0 ? (language === 'zh' ? `第 ${ch.number} 章: ` : `Chapter ${ch.number}: `) : ''}
+                        {language === 'zh' ? `第 ${ch.number} 章: ` : `Chapter ${ch.number}: `}
                         {chTitle}
                       </h4>
-                      <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 shrink-0 border border-neutral-200/60">
-                        {ch.volume === 1 ? 'Vol 1' : ch.volume === 2 ? 'Vol 2' : (ch.id.includes('rtos') ? 'RTOS' : 'Embedded')}
-                      </span>
+                      {(() => {
+                        const book = getBookForChapter(ch);
+                        const bookBadge = language === 'zh' ? book.badgeZh : book.badgeEn;
+                        const bookTitle = language === 'zh' ? book.titleZh : book.titleEn;
+                        return (
+                          <span
+                            className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-600 shrink-0 border border-neutral-200/60"
+                            title={bookTitle}
+                          >
+                            {bookBadge}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <p className="text-xs text-neutral-500 mt-1 line-clamp-2 leading-relaxed">
