@@ -56,7 +56,8 @@ jobs:
 
       - name: Install PDF conversion tools
         run: |
-          uv pip install --system "markitdown[pdf]"
+          uv venv --allow-existing .venv
+          uv pip install "markitdown[pdf]"
 
       - name: Convert PDFs to Markdown
         run: npm run convert:pdfs

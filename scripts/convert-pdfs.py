@@ -619,17 +619,24 @@ def get_existing_max_order(content_dir: Path, known_book_prefixes: list[str]) ->
     return max_order
 
 
+def is_already_translated(zh_file: Path) -> bool:
+    """Checks if a Chinese markdown file exists and contains actual Chinese translation."""
+    if not zh_file.exists():
+        return False
+    try:
+        content = zh_file.read_text(encoding='utf-8')
+        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', content))
+        return chinese_chars > 100
+    except Exception:
+        return False
+
+
 def clean_existing_generated_folders(content_dir: Path, known_book_prefixes: list[str]):
-    """Removes previously generated book folders so re-running is clean and deterministic."""
-    pattern_known = re.compile(
-        r'^\d+[\.\-_]\s*(?:' + '|'.join(re.escape(p) for p in known_book_prefixes) + r')\b',
-        re.I
-    )
+    """Removes legacy unnumbered book folders (e.g. boost-asio, cpp-concurrency) if present."""
+    legacy_dirs = ['boost-asio', 'cpp-concurrency']
     for entry in content_dir.iterdir():
-        if not entry.is_dir():
-            continue
-        if pattern_known.match(entry.name) or entry.name in ['boost-asio', 'cpp-concurrency']:
-            print(f"Cleaning up previous generated directory: {entry.name}")
+        if entry.is_dir() and entry.name in legacy_dirs:
+            print(f"Cleaning up legacy unnumbered directory: {entry.name}")
             shutil.rmtree(entry)
 
 
@@ -658,6 +665,14 @@ def process_book(pdf_name: str, config: dict, start_order: int) -> int:
         out_dir = CONTENT_DIR / folder_name
         out_dir.mkdir(parents=True, exist_ok=True)
         
+        en_file = out_dir / 'index.en.md'
+        zh_file = out_dir / 'index.zh.md'
+        already_has_zh = is_already_translated(zh_file)
+
+        if en_file.exists() and en_file.stat().st_size > 100 and already_has_zh:
+            print(f"  [{order}] {folder_name} already exists and is fully translated. Preserving.")
+            continue
+
         print(f"  [{order}] Extracting {ch['title_en']} (pages {ch['start_page']}-{ch['end_page']}) -> {folder_name}...")
         raw_text = extract_pages_text(pdf_path, ch['start_page'], ch['end_page'])
         
@@ -692,13 +707,14 @@ def process_book(pdf_name: str, config: dict, start_order: int) -> int:
         )
         
         # Write index.en.md
-        en_file = out_dir / 'index.en.md'
         en_file.write_text(fm_en + body_en, encoding='utf-8')
         
-        # Write index.zh.md (with Chinese title & frontmatter, preserving technical body)
-        zh_body = body_en.replace(f"# {ch['title_en']}", f"# {ch['title_zh']}\n\n> 本章包含英文原书核心技术内容与完整代码示例，提供中英文对照检索。")
-        zh_file = out_dir / 'index.zh.md'
-        zh_file.write_text(fm_zh + zh_body, encoding='utf-8')
+        # Write index.zh.md if not already translated
+        if not already_has_zh:
+            zh_body = body_en.replace(f"# {ch['title_en']}", f"# {ch['title_zh']}\n\n> 本章包含英文原书核心技术内容与完整代码示例，提供中英文对照检索。")
+            zh_file.write_text(fm_zh + zh_body, encoding='utf-8')
+        else:
+            print(f"  [{order}] Preserving existing Chinese translation for {zh_file}")
 
     print(f"Finished processing {book_short_name}: {len(chapters)} chapters written.")
     return current_order
